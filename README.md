@@ -4,7 +4,7 @@ An options pricing and volatility surface workbench. Price American and European
 
 ## Setup
 
-Requires [Bun](https://bun.sh), Node 20+, Docker, and a Postgres connection string.
+Requires [Bun](https://bun.sh), Node 20.19+ (or 22.12+), Docker, and a Postgres connection string.
 
 ```
 bun install
