@@ -45,12 +45,27 @@ Bun, Node 20.19+ (or 22.12+), and Docker for Postgres and Redis.
 
 ```
 docker compose up -d
-bun install
 bun run sync-engine
 ```
 
-Copy `.env.example` to `.env` and fill in the values. A market-data API key is read server-side
-only and is never sent to the browser.
+Then set up the API:
+
+```
+cd backend
+bun install
+cp .env.example .env
+bun run db:migrate
+bun run src/scripts/ingest.ts IBM
+bun run dev
+```
+
+`bun run worker` runs the scheduled chain snapshots alongside it.
+
+Copy `.env.example` to `.env` and fill in the values. `BETTER_AUTH_SECRET` must be at least 32
+characters. `MARKET_DATA_SOURCE` selects where chains come from: `fixture` reads the committed
+chain and needs no key, `alphavantage` calls the live API and needs `ALPHA_VANTAGE_API_KEY` on a
+plan that includes option chains. A market-data API key is read server-side only and is never sent
+to the browser.
 
 ## Checks
 
