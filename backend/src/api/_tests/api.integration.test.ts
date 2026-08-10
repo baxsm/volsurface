@@ -197,6 +197,73 @@ describe("pricing endpoints", () => {
     expect(body.maxLoss).toBeCloseTo(-7.25, 9);
     expect(body.netDebit).toBeCloseTo(7.25, 9);
   });
+
+  // each named preset has a payoff signature the builder's presets must produce.
+  // the expected values are solved by hand from the premiums, not copied from a
+  // previous run, so a regression in the engine cannot quietly rewrite them.
+  it("prices an iron condor as a capped credit position", async () => {
+    const { status, body } = await post("/api/strategy/payoff", {
+      legs: [
+        { action: "buy", type: "put", strike: 190, quantity: 1, entryPrice: 1.2 },
+        { action: "sell", type: "put", strike: 200, quantity: 1, entryPrice: 3.1 },
+        { action: "sell", type: "call", strike: 225, quantity: 1, entryPrice: 2.8 },
+        { action: "buy", type: "call", strike: 235, quantity: 1, entryPrice: 1.05 },
+      ],
+    });
+
+    expect(status).toBe(200);
+    // credit 3.65, so max profit is the credit and max loss the 10-wide wing less it
+    expect(body.netDebit).toBeCloseTo(-3.65, 9);
+    expect(body.maxProfit).toBeCloseTo(3.65, 9);
+    expect(body.maxLoss).toBeCloseTo(-6.35, 9);
+    expect(body.breakevens).toEqual([196.35, 228.65]);
+  });
+
+  it("prices a long straddle as unbounded above and capped below", async () => {
+    const { status, body } = await post("/api/strategy/payoff", {
+      legs: [
+        { action: "buy", type: "call", strike: 210, quantity: 1, entryPrice: 8 },
+        { action: "buy", type: "put", strike: 210, quantity: 1, entryPrice: 6 },
+      ],
+    });
+
+    expect(status).toBe(200);
+    expect(body.maxProfit).toBeNull();
+    expect(body.maxLoss).toBeCloseTo(-14, 9);
+    expect(body.breakevens).toEqual([196, 224]);
+  });
+
+  it("prices a butterfly peaking at the body strike", async () => {
+    const { status, body } = await post("/api/strategy/payoff", {
+      legs: [
+        { action: "buy", type: "call", strike: 200, quantity: 1, entryPrice: 14 },
+        { action: "sell", type: "call", strike: 210, quantity: 2, entryPrice: 8 },
+        { action: "buy", type: "call", strike: 220, quantity: 1, entryPrice: 4 },
+      ],
+    });
+
+    expect(status).toBe(200);
+    // 2.00 debit, so the peak is the 10-wide wing less the debit
+    expect(body.netDebit).toBeCloseTo(2, 9);
+    expect(body.maxProfit).toBeCloseTo(8, 9);
+    expect(body.maxLoss).toBeCloseTo(-2, 9);
+    expect(body.breakevens).toEqual([202, 218]);
+  });
+
+  it("draws over the window the caller asks for", async () => {
+    const { status, body } = await post("/api/strategy/payoff", {
+      legs: [{ action: "buy", type: "call", strike: 210, quantity: 1, entryPrice: 8 }],
+      spotRange: { min: 150, max: 260, steps: 50 },
+    });
+
+    expect(status).toBe(200);
+    expect(body.range).toEqual({ min: 150, max: 260 });
+
+    const points = body.points as { spot: number }[];
+    expect(points.length).toBeGreaterThan(2);
+    expect(points[0]?.spot).toBeCloseTo(150, 9);
+    expect(points[points.length - 1]?.spot).toBeCloseTo(260, 9);
+  });
 });
 
 describe("input bounds", () => {

@@ -39,10 +39,17 @@ interface ErrorStateProps {
   title: string;
   message: string;
   onRetry?: () => void;
+  /** for failures a retry cannot fix, where the action is a way out instead */
+  retryLabel?: string;
 }
 
 /** deliberately not the empty state: a failure must never read as "no data" */
-export const ErrorState: FC<ErrorStateProps> = ({ title, message, onRetry }) => (
+export const ErrorState: FC<ErrorStateProps> = ({
+  title,
+  message,
+  onRetry,
+  retryLabel = "Try again",
+}) => (
   <div className="flex flex-col items-center justify-center px-6 py-20 text-center" role="alert">
     <div className="mb-4 h-px w-12 bg-neg" />
     <h3 className="text-md text-text">{title}</h3>
@@ -53,7 +60,7 @@ export const ErrorState: FC<ErrorStateProps> = ({ title, message, onRetry }) => 
         onClick={onRetry}
         className="mt-6 cursor-pointer rounded-sm border border-border-strong px-4 py-2 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent"
       >
-        Try again
+        {retryLabel}
       </button>
     )}
   </div>

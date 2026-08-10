@@ -197,15 +197,18 @@ export const Topbar: FC<{ onOpenNav: () => void }> = ({ onOpenNav }) => {
           Sign in
         </a>
       ) : (
-        <div className="flex items-center gap-3">
-          <span className="hidden max-w-40 truncate text-sm text-text-muted sm:inline">
+        <div className="flex min-w-0 items-center gap-3">
+          {/* the email yields first: it can be any length, and letting it push
+              the sign out button off the edge is worse than truncating it. only
+              from lg, because at tablet width the rail already takes the room. */}
+          <span className="hidden min-w-0 max-w-40 truncate text-sm text-text-muted lg:inline">
             {session.data.user.email}
           </span>
           <button
             type="button"
             onClick={onSignOut}
             disabled={signingOut}
-            className="cursor-pointer rounded-sm border border-border px-3 py-1.5 text-sm text-text-muted transition-colors hover:border-border-strong hover:text-text disabled:opacity-50"
+            className="shrink-0 cursor-pointer rounded-sm border border-border px-3 py-1.5 text-sm whitespace-nowrap text-text-muted transition-colors hover:border-border-strong hover:text-text disabled:opacity-50"
           >
             {signingOut ? "Signing out" : "Sign out"}
           </button>
