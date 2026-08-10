@@ -30,8 +30,10 @@ export const auth = betterAuth({
   advanced: {
     defaultCookieAttributes: {
       httpOnly: true,
-      sameSite: "lax",
-      secure: isProduction,
+      sameSite: env.COOKIE_SAME_SITE,
+      // "none" is only honoured on a secure cookie, and env.ts refuses that
+      // combination outside production rather than letting it fail silently
+      secure: isProduction || env.COOKIE_SAME_SITE === "none",
     },
   },
   trustedOrigins: [env.WEB_ORIGIN],

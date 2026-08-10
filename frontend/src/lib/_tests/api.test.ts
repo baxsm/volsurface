@@ -53,11 +53,34 @@ describe("api", () => {
     expect((error as ApiError).code).toBe("INTERNAL");
   });
 
+  // the body below is what the api really sends on a 429, copied from a live
+  // response. an earlier version of this test mocked a bodyless 429, which
+  // passed while the real code arrived under a name the client did not know.
   it("maps a 429 to a rate limit the ui can explain", async () => {
+    mockFetch(() =>
+      json(
+        { error: { code: "TOO_MANY_REQUESTS", message: "Too many requests. Try again in 57s." } },
+        429,
+      ),
+    );
+    await expect(api("/api/price/iv", { method: "POST", body: {} })).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+      message: "Too many requests. Try again in 57s.",
+    });
+  });
+
+  it("maps a bodyless 429 by status", async () => {
     mockFetch(() => new Response(null, { status: 429 }));
     await expect(api("/api/price/iv", { method: "POST", body: {} })).rejects.toMatchObject({
-      code: "RATE_LIMITED",
+      code: "TOO_MANY_REQUESTS",
     });
+  });
+
+  it("falls back to the status when the body carries an unknown code", async () => {
+    mockFetch(() => json({ error: { code: "TEAPOT", message: "Nope." } }, 403));
+    const error = await api("/api/symbols").catch((e: unknown) => e);
+    expect((error as ApiError).code).toBe("FORBIDDEN");
+    expect((error as ApiError).message).toBe("Nope.");
   });
 
   // a dead server and a 404 must not read the same to the user

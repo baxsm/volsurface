@@ -15,13 +15,16 @@ node_modules/
 .pnp
 .pnp.js
 
-# builds
-dist/
-build/
+# builds. anchored to each service root on purpose: a bare "**/build/" also
+# matches source directories named build, which silently drops them from both
+# git and tailwind's source scan.
+/dist/
+/build/
+/out/
 .next/
-out/
-**/dist/
-**/build/
+*/dist/
+*/build/
+*/out/
 
 # env
 .env

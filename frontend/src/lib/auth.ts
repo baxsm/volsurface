@@ -43,7 +43,7 @@ const authFetch = async <T>(path: string, body?: unknown): Promise<T> => {
     const flat = payload as { code?: string; message?: string } | null;
     const code = flat?.code ?? "UNKNOWN";
     if (response.status === 429) {
-      throw new AuthError("RATE_LIMITED", "Too many attempts. Wait a moment and try again.");
+      throw new AuthError("TOO_MANY_REQUESTS", "Too many attempts. Wait a moment and try again.");
     }
     throw new AuthError(
       code,

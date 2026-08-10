@@ -1,0 +1,10 @@
+# the formatter expects lf, so the working tree keeps lf on every platform
+# rather than depending on each machine's core.autocrlf setting
+* text=auto eol=lf
+
+# binary, never converted
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

@@ -4,11 +4,13 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { RedirectIfAuthed, RequireAuth } from "@/components/auth/route-guard";
 import { AppLayout } from "@/components/shell/app-layout";
 import { ApiError } from "@/lib/api";
+import { BuildPage } from "@/pages/build";
 import { ChainPage } from "@/pages/chain";
 import { NotBuiltYet } from "@/pages/placeholder";
 import { SettingsPage } from "@/pages/settings";
 import { SignInPage } from "@/pages/sign-in";
 import { SignUpPage } from "@/pages/sign-up";
+import { StrategiesPage } from "@/pages/strategies";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,23 +58,12 @@ export const App: FC = () => (
             }
           />
           <Route path="chain" element={<ChainPage />} />
-          <Route
-            path="build"
-            element={
-              <NotBuiltYet
-                title="Strategy builder"
-                detail="Multi-leg payoffs land in a later phase."
-              />
-            }
-          />
+          <Route path="build" element={<BuildPage />} />
           <Route
             path="strategies"
             element={
               <RequireAuth>
-                <NotBuiltYet
-                  title="Saved strategies"
-                  detail="Saved strategies land with the builder in a later phase."
-                />
+                <StrategiesPage />
               </RequireAuth>
             }
           />

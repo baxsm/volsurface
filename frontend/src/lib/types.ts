@@ -57,6 +57,29 @@ export interface Chain {
   expirations: ExpiryGroup[];
 }
 
+export interface SavedStrategySummary {
+  id: string;
+  name: string;
+  kind: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SavedStrategyLeg {
+  action: "buy" | "sell";
+  type: "call" | "put";
+  strike: number;
+  expiration: string;
+  quantity: number;
+  entryPrice: number | null;
+}
+
+export interface SavedStrategy extends SavedStrategySummary {
+  ticker: string | null;
+  legs: SavedStrategyLeg[];
+}
+
 export interface SessionUser {
   id: string;
   email: string;

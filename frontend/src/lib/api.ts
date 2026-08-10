@@ -1,11 +1,15 @@
 import { env } from "./env";
 
+// these mirror the codes the api actually puts on the wire. TOO_MANY_REQUESTS
+// is the backend's own name for a 429 and has to match it exactly, or the body
+// code lands outside this union and every check against it silently misses.
 export type ApiErrorCode =
   | "BAD_REQUEST"
   | "UNAUTHORIZED"
   | "FORBIDDEN"
   | "NOT_FOUND"
-  | "RATE_LIMITED"
+  | "CONFLICT"
+  | "TOO_MANY_REQUESTS"
   | "INTERNAL"
   | "NETWORK";
 
@@ -26,7 +30,8 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   UNAUTHORIZED: "Sign in to continue.",
   FORBIDDEN: "You do not have access to that.",
   NOT_FOUND: "Not found.",
-  RATE_LIMITED: "Too many requests. Wait a moment and try again.",
+  CONFLICT: "That already exists.",
+  TOO_MANY_REQUESTS: "Too many requests. Wait a moment and try again.",
   INTERNAL: "Something failed on our end. Try again.",
   NETWORK: "Could not reach the server. Check your connection and try again.",
 };
@@ -37,12 +42,17 @@ const isErrorBody = (value: unknown): value is { error: { code: string; message:
   "error" in value &&
   typeof (value as { error: unknown }).error === "object";
 
+/** a code we do not recognise falls back to the status rather than being cast
+    into the union, where it would leave every message lookup undefined */
+const isKnownCode = (code: string): code is ApiErrorCode => code in MESSAGES;
+
 const codeFromStatus = (status: number): ApiErrorCode => {
   if (status === 400) return "BAD_REQUEST";
   if (status === 401) return "UNAUTHORIZED";
   if (status === 403) return "FORBIDDEN";
   if (status === 404) return "NOT_FOUND";
-  if (status === 429) return "RATE_LIMITED";
+  if (status === 409) return "CONFLICT";
+  if (status === 429) return "TOO_MANY_REQUESTS";
   return "INTERNAL";
 };
 
@@ -81,9 +91,10 @@ export const api = async <T>(path: string, options: RequestOptions = {}): Promis
   const payload: unknown = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const code = isErrorBody(payload)
-      ? ((payload.error.code as ApiErrorCode) ?? codeFromStatus(response.status))
-      : codeFromStatus(response.status);
+    const code =
+      isErrorBody(payload) && isKnownCode(payload.error.code)
+        ? payload.error.code
+        : codeFromStatus(response.status);
     const message = isErrorBody(payload) ? payload.error.message : MESSAGES[code];
     throw new ApiError(code, message || MESSAGES[code], response.status);
   }
