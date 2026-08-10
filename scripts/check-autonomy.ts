@@ -4,18 +4,28 @@
 
 import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const SERVICES = ["backend", "frontend"];
 
-// any specifier that climbs out of the service root, or names a sibling service
-const ESCAPES = [
-  /from\s+["'](\.\.\/){2,}/,
-  /import\s+["'](\.\.\/){2,}/,
-  /from\s+["'][^"']*\/(engine|backend|frontend)\/src/,
-  /from\s+["']@volsurface\//,
-];
+// specifiers that name another workspace outright
+const NAMED_ESCAPES = [/^@volsurface\//, /(^|\/)(engine|backend|frontend)\/src(\/|$)/];
+
+const SPECIFIER = /(?:from|import)\s+["']([^"']+)["']/;
+
+/**
+ * a relative specifier escapes only if it resolves outside the service root.
+ * counting "../" segments in the text cannot tell the difference: a file in
+ * src/services/market/_tests legitimately needs "../../" to reach a sibling
+ * module, and that stays well inside the service.
+ */
+const escapes = (specifier: string, fromFile: string, serviceRoot: string): boolean => {
+  if (NAMED_ESCAPES.some((pattern) => pattern.test(specifier))) return true;
+  if (!specifier.startsWith(".")) return false;
+  const target = resolve(dirname(fromFile), specifier);
+  return !target.startsWith(serviceRoot);
+};
 
 const collect = async (dir: string): Promise<string[]> => {
   if (!existsSync(dir)) return [];
@@ -45,12 +55,11 @@ for (const service of SERVICES) {
     const lines = (await readFile(file, "utf8")).split("\n");
     lines.forEach((line, i) => {
       if (line.trimStart().startsWith("//")) return;
-      for (const pattern of ESCAPES) {
-        if (pattern.test(line)) {
-          console.error(`  ${relative(ROOT, file)}:${i + 1}  ${line.trim()}`);
-          violations++;
-          return;
-        }
+      const specifier = SPECIFIER.exec(line)?.[1];
+      if (specifier === undefined) return;
+      if (escapes(specifier, file, root)) {
+        console.error(`  ${relative(ROOT, file)}:${i + 1}  ${line.trim()}`);
+        violations++;
       }
     });
   }
