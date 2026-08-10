@@ -67,6 +67,18 @@ chain and needs no key, `alphavantage` calls the live API and needs `ALPHA_VANTA
 plan that includes option chains. A market-data API key is read server-side only and is never sent
 to the browser.
 
+Then the web client:
+
+```
+cd frontend
+bun install
+cp .env.example .env
+bun run dev
+```
+
+`VITE_API_URL` points at the API and must match the backend's `WEB_ORIGIN`, which is the only origin
+allowed through CORS.
+
 ## Checks
 
 ```
@@ -74,4 +86,11 @@ bun run verify
 ```
 
 Runs the linter, confirms the engine copies are in sync, checks that neither service imports across
-a boundary, typechecks, and runs the test suite.
+a boundary, typechecks every service, runs the unit and component suites, and builds the client.
+
+Browser tests run separately against a running API and client:
+
+```
+cd frontend
+bun run test:e2e
+```

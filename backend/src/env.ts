@@ -6,13 +6,13 @@ import { z } from "zod";
 // carries unrelated system keys.
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+  PORT: z.coerce.number().int().min(1).max(65535).default(3007),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   // frontend origin allowed through CORS with credentials. never "*".
   WEB_ORIGIN: z.string().url().default("http://localhost:5173"),
   BETTER_AUTH_SECRET: z.string().min(32),
-  BETTER_AUTH_URL: z.string().url().default("http://localhost:3001"),
+  BETTER_AUTH_URL: z.string().url().default("http://localhost:3007"),
   // server-side only. the browser never sees this and never calls the vendor.
   ALPHA_VANTAGE_API_KEY: z.string().default(""),
   // "fixture" reads the committed chain, "alphavantage" calls the live API.

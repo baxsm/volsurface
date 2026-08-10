@@ -1,0 +1,95 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { FC } from "react";
+import { BrowserRouter, Route, Routes } from "react-router";
+import { RedirectIfAuthed, RequireAuth } from "@/components/auth/route-guard";
+import { AppLayout } from "@/components/shell/app-layout";
+import { ApiError } from "@/lib/api";
+import { ChainPage } from "@/pages/chain";
+import { NotBuiltYet } from "@/pages/placeholder";
+import { SettingsPage } from "@/pages/settings";
+import { SignInPage } from "@/pages/sign-in";
+import { SignUpPage } from "@/pages/sign-up";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      // a 404 or a 401 will not become a 200 by asking again, so only
+      // server and network faults are worth retrying
+      retry: (failureCount, error) => {
+        if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false;
+        return failureCount < 2;
+      },
+    },
+  },
+});
+
+export const App: FC = () => (
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/sign-in"
+          element={
+            <RedirectIfAuthed>
+              <SignInPage />
+            </RedirectIfAuthed>
+          }
+        />
+        <Route
+          path="/sign-up"
+          element={
+            <RedirectIfAuthed>
+              <SignUpPage />
+            </RedirectIfAuthed>
+          }
+        />
+
+        <Route element={<AppLayout />}>
+          <Route
+            index
+            element={
+              <NotBuiltYet
+                title="Surface"
+                detail="The 3D volatility surface lands in a later phase. The chain view is live now."
+              />
+            }
+          />
+          <Route path="chain" element={<ChainPage />} />
+          <Route
+            path="build"
+            element={
+              <NotBuiltYet
+                title="Strategy builder"
+                detail="Multi-leg payoffs land in a later phase."
+              />
+            }
+          />
+          <Route
+            path="strategies"
+            element={
+              <RequireAuth>
+                <NotBuiltYet
+                  title="Saved strategies"
+                  detail="Saved strategies land with the builder in a later phase."
+                />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="settings"
+            element={
+              <RequireAuth>
+                <SettingsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="*"
+            element={<NotBuiltYet title="Not found" detail="That page does not exist." />}
+          />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  </QueryClientProvider>
+);

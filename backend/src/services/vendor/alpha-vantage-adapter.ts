@@ -8,14 +8,11 @@ const BASE_URL = "https://www.alphavantage.co/query";
 const TIMEOUT_MS = 20_000;
 
 /**
- * live Alpha Vantage HISTORICAL_OPTIONS.
- *
- * NOT verified against the live endpoint: HISTORICAL_OPTIONS and
- * REALTIME_OPTIONS are premium-only, and a free key is rejected for every
- * symbol including IBM. The request shape and the response schema come from
- * the vendor's documented format and from the committed fixture, which is a
- * real captured response - so parsing is proven, and the HTTP call is not.
- * Running with MARKET_DATA_SOURCE=fixture is the verified path.
+ * live Alpha Vantage HISTORICAL_OPTIONS. not verified against the live
+ * endpoint: that action and REALTIME_OPTIONS are premium-only, and a free key
+ * is rejected for every symbol, IBM included. the response schema comes from
+ * the committed fixture, a real captured response, so parsing is proven and
+ * the http call is not. MARKET_DATA_SOURCE=fixture is the verified path.
  */
 export class AlphaVantageAdapter implements VendorAdapter {
   readonly id = "alphavantage";

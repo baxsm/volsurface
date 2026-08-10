@@ -8,11 +8,15 @@
     "check:autonomy": "bun run scripts/check-autonomy.ts",
     "test:engine": "cd engine && bun run test",
     "test:backend": "cd backend && bun run test",
+    "test:frontend": "cd frontend && bun run test",
+    "test:e2e": "cd frontend && bun run test:e2e",
     "typecheck:engine": "cd engine && bun run typecheck",
     "typecheck:backend": "cd backend && bun run typecheck",
+    "typecheck:frontend": "cd frontend && bun run typecheck",
+    "build:frontend": "cd frontend && bun run build",
     "lint": "biome check",
     "lint:fix": "biome check --write",
-    "verify": "bun run lint && bun run sync-engine:check && bun run check:autonomy && bun run typecheck:engine && bun run typecheck:backend && bun run test:engine && bun run test:backend"
+    "verify": "bun run lint && bun run sync-engine:check && bun run check:autonomy && bun run typecheck:engine && bun run typecheck:backend && bun run typecheck:frontend && bun run test:engine && bun run test:backend && bun run test:frontend && bun run build:frontend"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.7",

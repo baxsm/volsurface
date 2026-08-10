@@ -43,8 +43,8 @@ export const createApp = () => {
 
   app.get("/health", (c) => c.json({ ok: true }));
 
-  // credential stuffing guard. tighter than the read limit and applied before
-  // better auth sees the request.
+  // credential stuffing guard. the tightest limit in the app, and applied
+  // before better auth sees the request.
   app.use("/api/auth/*", rateLimit({ limit: 20, windowMs: 60_000 }));
   app.on(["GET", "POST"], "/api/auth/*", (c) => auth.handler(c.req.raw));
 
