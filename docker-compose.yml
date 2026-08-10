@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: volsurface-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: volsurface
+      POSTGRES_PASSWORD: volsurface
+      POSTGRES_DB: volsurface
+    ports:
+      - "5436:5432"
+    volumes:
+      # postgres 18+ expects the mount one level up; the server then owns the
+      # versioned subdirectory itself, which is what makes pg_upgrade --link work
+      - volsurface-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U volsurface -d volsurface"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: volsurface-redis
+    restart: unless-stopped
+    ports:
+      - "6382:6379"
+    volumes:
+      - volsurface-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  volsurface-pgdata:
+  volsurface-redisdata:

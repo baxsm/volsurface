@@ -5,6 +5,10 @@ CLAUDE.md
 # local planning docs (never pushed)
 docs/
 
+# generated engine copies (canonical source is /engine, synced via scripts/sync-engine.ts)
+backend/src/engine/
+frontend/src/engine/
+
 # dependencies
 node_modules/
 **/node_modules/
