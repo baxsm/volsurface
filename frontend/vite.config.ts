@@ -3,6 +3,17 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
+// the browser always talks to its own origin and this forwards to the api, so
+// the session cookie is first-party locally exactly as it is in production
+// behind the web host's rewrite. deploying the two services apart then changes
+// the rewrite target, not the app.
+const apiProxy = {
+  "/api": {
+    target: process.env.API_PROXY_TARGET ?? "http://localhost:3007",
+    changeOrigin: true,
+  },
+};
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -12,16 +23,13 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    // the browser always talks to its own origin and this forwards to the api,
-    // so the session cookie is first-party in dev exactly as it is in
-    // production behind the host's rewrite. deploying the two services apart
-    // then changes the rewrite target, not the app.
-    proxy: {
-      "/api": {
-        target: process.env.API_PROXY_TARGET ?? "http://localhost:3007",
-        changeOrigin: true,
-      },
-    },
+    proxy: apiProxy,
+  },
+  // the same rewrite for `vite preview`, so the built bundle can be verified
+  // against the api the way it is actually served rather than only in dev
+  preview: {
+    port: 4173,
+    proxy: apiProxy,
   },
   test: {
     environment: "jsdom",

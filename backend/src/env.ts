@@ -43,7 +43,7 @@ export const isProduction = env.NODE_ENV === "production";
 // broken login rather than a misconfiguration, so it stops the process here.
 if (env.COOKIE_SAME_SITE === "none" && !isProduction) {
   console.error(
-    "invalid environment:\n  COOKIE_SAME_SITE: \"none\" needs secure cookies, which only apply when NODE_ENV=production",
+    'invalid environment:\n  COOKIE_SAME_SITE: "none" needs secure cookies, which only apply when NODE_ENV=production',
   );
   process.exit(1);
 }
