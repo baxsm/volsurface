@@ -39,7 +39,7 @@ export const SettingsPage: FC = () => {
                 type="button"
                 onClick={() => setTicker(symbol.ticker)}
                 aria-pressed={symbol.ticker === ticker}
-                className={`num cursor-pointer rounded-sm border px-3 py-1.5 text-sm transition-colors ${
+                className={`num cursor-pointer rounded-sm border px-3 py-1.5 text-sm transition-colors active:translate-y-px ${
                   symbol.ticker === ticker
                     ? "border-accent-dim bg-accent-glow text-accent"
                     : "border-border text-text-muted hover:border-border-strong hover:text-text"

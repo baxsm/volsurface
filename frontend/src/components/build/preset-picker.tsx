@@ -23,10 +23,10 @@ export const PresetPicker: FC<PresetPickerProps> = ({ active, disabled, onPick }
           // description instead of which preset this is.
           title={preset.summary}
           aria-label={preset.label}
-          className={`cursor-pointer rounded-sm px-2.5 py-1.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+          className={`cursor-pointer rounded-sm border px-2.5 py-1.5 text-xs transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40 disabled:active:translate-y-0 ${
             isActive
-              ? "bg-accent-glow text-accent"
-              : "text-text-muted hover:bg-surface-2 hover:text-text"
+              ? "border-accent-dim bg-accent-glow text-accent"
+              : "border-border bg-surface-2 text-text-muted hover:border-border-strong hover:text-text"
           }`}
         >
           {preset.label}

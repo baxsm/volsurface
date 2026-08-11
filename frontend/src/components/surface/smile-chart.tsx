@@ -1,5 +1,6 @@
 import { type FC, useEffect, useRef, useState } from "react";
 import { decimal, percent } from "@/lib/format";
+import { rampHex } from "@/lib/surface-geometry";
 
 export interface SmilePoint {
   /** the horizontal axis value: strike for a smile, years for a term cut */
@@ -90,7 +91,10 @@ export const SmileChart: FC<SmileChartProps> = ({
   const ticks = usable ? [rawMinIv, (rawMinIv + rawMaxIv) / 2, rawMaxIv] : [];
 
   return (
-    <div ref={ref} className="w-full">
+    /* the height is reserved whether or not the curve draws. without it the
+       container collapses to nothing on the first paint, before the observer
+       has reported a width, and the panel below jumps up. */
+    <div ref={ref} className="w-full" style={{ minHeight: HEIGHT }}>
       {usable && (
         <svg
           width={width}
@@ -124,18 +128,27 @@ export const SmileChart: FC<SmileChartProps> = ({
             </g>
           ))}
 
+          {/* ids are document-global, so these are namespaced rather than named
+              for what they draw - the auth page defines its own smile gradient */}
           <defs>
-            <linearGradient id="smile-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
+            <linearGradient id="smile-chart-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={rampHex(0.62)} stopOpacity="0.18" />
+              <stop offset="100%" stopColor={rampHex(0.62)} stopOpacity="0" />
+            </linearGradient>
+            {/* the stroke walks the same perceptual ramp the 3d mesh paints, so
+                a cut through the surface is coloured like the surface it cuts */}
+            <linearGradient id="smile-chart-stroke" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stopColor={rampHex(0.15)} />
+              <stop offset="50%" stopColor={rampHex(0.55)} />
+              <stop offset="100%" stopColor={rampHex(0.95)} />
             </linearGradient>
           </defs>
 
-          <path d={area} fill="url(#smile-fill)" />
+          <path d={area} fill="url(#smile-chart-fill)" />
           <path
             d={path}
             fill="none"
-            stroke="var(--color-accent)"
+            stroke="url(#smile-chart-stroke)"
             strokeWidth="1.75"
             strokeLinejoin="round"
           />

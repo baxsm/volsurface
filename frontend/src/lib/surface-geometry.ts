@@ -213,6 +213,16 @@ export const rampColor = (t: number): [number, number, number] => {
   ];
 };
 
+/** the same ramp sample as a css hex, for the 2d cuts drawn in svg */
+export const rampHex = (t: number): string => {
+  const channel = (value: number) =>
+    Math.round(Math.min(Math.max(value, 0), 1) * 255)
+      .toString(16)
+      .padStart(2, "0");
+  const [r, g, b] = rampColor(t);
+  return `#${channel(r)}${channel(g)}${channel(b)}`;
+};
+
 export interface SurfaceMesh {
   positions: Float32Array;
   colors: Float32Array;

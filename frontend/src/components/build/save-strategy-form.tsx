@@ -1,5 +1,6 @@
 import { type FC, type FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router";
+import { Spinner } from "@/components/ui/states";
 import { ApiError } from "@/lib/api";
 import { useSaveStrategy } from "@/lib/queries";
 import { legsAreComplete, type StrategyLeg } from "@/lib/strategy";
@@ -90,8 +91,10 @@ export const SaveStrategyForm: FC<SaveStrategyFormProps> = ({
       <button
         type="submit"
         disabled={!canSave}
-        className="cursor-pointer rounded-sm bg-accent px-4 py-2 text-sm text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+        aria-busy={save.isPending}
+        className="flex cursor-pointer items-center gap-2 rounded-sm bg-accent px-4 py-2 text-sm text-bg transition-colors hover:bg-accent/90 active:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-accent"
       >
+        {save.isPending && <Spinner />}
         {save.isPending ? "Saving" : existing === null ? "Save" : "Save changes"}
       </button>
 
@@ -103,12 +106,15 @@ export const SaveStrategyForm: FC<SaveStrategyFormProps> = ({
         ) : saved ? (
           <span className="text-pos">
             Saved.{" "}
-            <Link to="/strategies" className="underline hover:text-accent">
+            <Link to="/strategies" className="underline">
               See your strategies
             </Link>
           </span>
         ) : !complete ? (
           <span className="text-text-faint">Finish every leg to save this position.</span>
+        ) : name.trim() === "" ? (
+          // otherwise the button just sits dead with nothing saying why
+          <span className="text-text-faint">Give this position a name to save it.</span>
         ) : null}
       </p>
     </form>

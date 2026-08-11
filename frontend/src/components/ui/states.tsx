@@ -1,5 +1,26 @@
 import type { FC, ReactNode } from "react";
 
+/** the in-button pending glyph. a changed word alone is easy to miss on a fast
+    response, so the motion is what actually reads as "working". */
+export const Spinner: FC<{ className?: string }> = ({ className = "" }) => (
+  <svg
+    className={`animate-spin ${className}`}
+    width="14"
+    height="14"
+    viewBox="0 0 16 16"
+    fill="none"
+    aria-hidden="true"
+  >
+    <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25" />
+    <path
+      d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 interface LoadingStateProps {
   label: string;
   rows?: number;
@@ -58,7 +79,7 @@ export const ErrorState: FC<ErrorStateProps> = ({
       <button
         type="button"
         onClick={onRetry}
-        className="mt-6 cursor-pointer rounded-sm border border-border-strong px-4 py-2 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent"
+        className="mt-6 cursor-pointer rounded-sm border border-border-strong px-4 py-2 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
       >
         {retryLabel}
       </button>

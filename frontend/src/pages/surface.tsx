@@ -36,7 +36,7 @@ const Toggle: FC<{
     onClick={onClick}
     aria-pressed={active}
     {...(label === undefined ? {} : { "aria-label": label })}
-    className={`cursor-pointer rounded-sm border px-2.5 py-1 text-xs transition-colors ${
+    className={`cursor-pointer rounded-sm border px-2.5 py-1 text-xs transition-colors active:translate-y-px ${
       active
         ? "border-accent-dim bg-accent-glow text-accent"
         : "border-border bg-surface-2 text-text-muted hover:border-border-strong hover:text-text"

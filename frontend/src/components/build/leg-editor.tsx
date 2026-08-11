@@ -132,7 +132,7 @@ const LegRow: FC<LegRowProps> = ({ leg, index, expirations, canRemove, onChange,
         onClick={() => onRemove(leg.id)}
         disabled={!canRemove}
         aria-label={`Remove leg ${index + 1}`}
-        className="cursor-pointer rounded-sm p-1.5 text-text-faint transition-colors hover:text-neg disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-text-faint"
+        className="cursor-pointer rounded-sm p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-neg active:translate-y-px disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted disabled:active:translate-y-0"
       >
         <svg
           width="14"
@@ -205,7 +205,7 @@ export const LegEditor: FC<LegEditorProps> = ({
       type="button"
       onClick={onAdd}
       disabled={legs.length >= maxLegs}
-      className="mt-3 cursor-pointer rounded-sm border border-border-strong px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-accent-dim hover:text-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-strong disabled:hover:text-text-muted"
+      className="mt-3 cursor-pointer rounded-sm border border-border-strong px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-strong disabled:hover:text-text-muted disabled:active:translate-y-0"
     >
       Add leg
     </button>

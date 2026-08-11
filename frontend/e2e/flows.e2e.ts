@@ -106,6 +106,38 @@ test("the term cut swaps the readout instead of leaving it blank", async ({ page
   ).toBeVisible();
 });
 
+test("the symbol menu opens over the surface instead of behind it", async ({ page }) => {
+  await page.goto("/");
+  await waitForSurface(page);
+
+  // the header used to be overflow-hidden, which clipped both menus to its own
+  // 56px height. z-index cannot recover from that: clipping happens first.
+  const trigger = page.locator('button[aria-haspopup="menu"]').first();
+  await expect(trigger).toHaveAttribute("aria-label", /Symbol: \w/);
+  await trigger.click();
+
+  const menu = page.locator('button[aria-haspopup="menu"] ~ div').first();
+  await expect(menu).toBeVisible();
+
+  const clipped = await menu.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    let node = el.parentElement;
+    let top = rect.top;
+    let bottom = rect.bottom;
+    while (node !== null && node !== document.body) {
+      if (getComputedStyle(node).overflowY !== "visible") {
+        const parent = node.getBoundingClientRect();
+        top = Math.max(top, parent.top);
+        bottom = Math.min(bottom, parent.bottom);
+      }
+      node = node.parentElement;
+    }
+    return { full: rect.height, visible: Math.max(0, bottom - top) };
+  });
+
+  expect(clipped.visible).toBeCloseTo(clipped.full, 0);
+});
+
 test("leaving the surface releases its webgl context", async ({ page }) => {
   await page.goto("/");
   await waitForSurface(page);

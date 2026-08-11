@@ -53,7 +53,7 @@ export const AuthLayout: FC<{ children: ReactNode }> = ({ children }) => (
         preserveAspectRatio="none"
       >
         <defs>
-          <linearGradient id="smile-fill" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="auth-smile-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.16" />
             <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0" />
           </linearGradient>
@@ -73,7 +73,7 @@ export const AuthLayout: FC<{ children: ReactNode }> = ({ children }) => (
         ))}
         <path
           d="M0 104 C 120 62, 200 44, 300 54 S 420 74, 480 66 L480 160 L0 160 Z"
-          fill="url(#smile-fill)"
+          fill="url(#auth-smile-fill)"
         />
       </svg>
     </div>

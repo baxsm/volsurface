@@ -68,7 +68,7 @@ export const ContractPanel: FC<ContractPanelProps> = ({
               type="button"
               onClick={onClose}
               aria-label="Close contract detail"
-              className="shrink-0 cursor-pointer rounded-sm p-1 text-text-faint transition-colors hover:text-text"
+              className="-m-1.5 shrink-0 cursor-pointer rounded-sm p-3 text-text-muted transition-colors hover:bg-surface-2 hover:text-text active:translate-y-px"
             >
               <svg
                 width="16"
@@ -109,7 +109,10 @@ export const ContractPanel: FC<ContractPanelProps> = ({
               </p>
             ) : (
               <dl className="grid grid-cols-2 gap-4">
-                <Metric label="Ours" value={percent(contract.computedIv, 2)} tone="text-accent" />
+                {/* ours vs vendor is provenance, not selection, so neither side
+                    takes the accent. the solver row below is the only value here
+                    with a semantic tone. */}
+                <Metric label="Ours" value={percent(contract.computedIv, 2)} />
                 <Metric label="Vendor" value={percent(contract.vendorIv, 2)} />
                 <Metric
                   label="Difference"

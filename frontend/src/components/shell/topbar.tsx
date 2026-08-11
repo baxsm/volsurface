@@ -43,7 +43,7 @@ const Dropdown: FC<{
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={`${label}: ${value}`}
-        className="flex cursor-pointer items-center gap-2 rounded-sm border border-border bg-surface-2 px-2.5 py-1.5 text-left whitespace-nowrap transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50 sm:gap-2.5 sm:px-3"
+        className="flex cursor-pointer items-center gap-2 rounded-sm border border-border bg-surface-2 px-2.5 py-1.5 text-left whitespace-nowrap transition-colors hover:border-border-strong active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0 sm:gap-2.5 sm:px-3"
       >
         <span className="hidden text-xs text-text-faint lg:inline">{label}</span>
         <span className="num text-sm text-text">{value}</span>
@@ -105,12 +105,16 @@ export const Topbar: FC<{ onOpenNav: () => void }> = ({ onOpenNav }) => {
   const snapshotList = snapshots.data ?? [];
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 overflow-hidden border-b border-border bg-surface px-3 sm:gap-3 sm:px-4">
+    /* the header must not clip: the symbol and snapshot menus open downward out
+       of it, and an overflow-hidden ancestor cuts them off whatever their
+       z-index. the pieces that can actually overrun bound themselves instead,
+       via min-w-0 and truncate on the email below. */
+    <header className="relative z-40 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface px-3 sm:gap-3 sm:px-4">
       <button
         type="button"
         onClick={onOpenNav}
         aria-label="Open navigation"
-        className="-ml-1 cursor-pointer rounded-sm p-2 text-text-muted transition-colors hover:text-text md:hidden"
+        className="-ml-1 cursor-pointer rounded-sm p-2 text-text-muted transition-colors hover:bg-surface-2 hover:text-text active:translate-y-px md:hidden"
       >
         <svg
           width="18"
@@ -192,7 +196,7 @@ export const Topbar: FC<{ onOpenNav: () => void }> = ({ onOpenNav }) => {
       {session.data == null ? (
         <a
           href="/sign-in"
-          className="rounded-sm border border-border-strong px-3 py-1.5 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent"
+          className="rounded-sm border border-border-strong px-3 py-1.5 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
         >
           Sign in
         </a>
@@ -208,7 +212,7 @@ export const Topbar: FC<{ onOpenNav: () => void }> = ({ onOpenNav }) => {
             type="button"
             onClick={onSignOut}
             disabled={signingOut}
-            className="shrink-0 cursor-pointer rounded-sm border border-border px-3 py-1.5 text-sm whitespace-nowrap text-text-muted transition-colors hover:border-border-strong hover:text-text disabled:opacity-50"
+            className="shrink-0 cursor-pointer rounded-sm border border-border px-3 py-1.5 text-sm whitespace-nowrap text-text-muted transition-colors hover:border-border-strong hover:text-text active:translate-y-px disabled:opacity-50 disabled:active:translate-y-0"
           >
             {signingOut ? "Signing out" : "Sign out"}
           </button>

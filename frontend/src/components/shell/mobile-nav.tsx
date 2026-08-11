@@ -1,13 +1,14 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type FC, useEffect } from "react";
 import { NavLink } from "react-router";
+import { Glyph } from "./rail";
 
 const LINKS = [
-  { to: "/", label: "Surface" },
-  { to: "/chain", label: "Chain" },
-  { to: "/build", label: "Build" },
-  { to: "/strategies", label: "Strategies" },
-  { to: "/settings", label: "Settings" },
+  { to: "/", label: "Surface", key: "surface" },
+  { to: "/chain", label: "Chain", key: "chain" },
+  { to: "/build", label: "Build", key: "build" },
+  { to: "/strategies", label: "Strategies", key: "strategies" },
+  { to: "/settings", label: "Settings", key: "settings" },
 ] as const;
 
 interface MobileNavProps {
@@ -16,6 +17,11 @@ interface MobileNavProps {
 }
 
 export const MobileNav: FC<MobileNavProps> = ({ open, onClose }) => {
+  // the global reduced-motion css only zeroes transition and animation
+  // durations. motion drives these springs from javascript, so they run at full
+  // travel unless the component opts out itself.
+  const reduced = useReducedMotion();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -35,16 +41,18 @@ export const MobileNav: FC<MobileNavProps> = ({ open, onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: reduced === true ? 0 : 0.15 }}
             onClick={onClose}
-            className="absolute inset-0 h-full w-full cursor-default bg-black/60"
+            className="absolute inset-0 h-full w-full cursor-pointer bg-black/60"
           />
           <motion.nav
             aria-label="Main"
-            initial={{ x: "-100%" }}
+            initial={reduced === true ? false : { x: "-100%" }}
             animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+            exit={reduced === true ? { opacity: 0 } : { x: "-100%" }}
+            transition={
+              reduced === true ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 30 }
+            }
             className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-surface"
           >
             <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
@@ -69,13 +77,14 @@ export const MobileNav: FC<MobileNavProps> = ({ open, onClose }) => {
                     end={link.to === "/"}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `block rounded-sm px-3 py-2.5 text-sm transition-colors ${
+                      `flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-colors active:translate-y-px ${
                         isActive
                           ? "bg-accent-glow text-accent"
                           : "text-text-muted hover:bg-surface-2 hover:text-text"
                       }`
                     }
                   >
+                    <Glyph name={link.key} className="shrink-0" />
                     {link.label}
                   </NavLink>
                 </li>

@@ -107,10 +107,10 @@ export const ChainPage: FC = () => {
                 type="button"
                 onClick={() => setExpiration(group.expiration)}
                 aria-pressed={isActive}
-                className={`shrink-0 cursor-pointer rounded-sm px-2.5 py-1.5 text-xs transition-colors ${
+                className={`shrink-0 cursor-pointer rounded-sm border px-2.5 py-1.5 text-xs transition-colors active:translate-y-px ${
                   isActive
-                    ? "bg-accent-glow text-accent"
-                    : "text-text-muted hover:bg-surface-2 hover:text-text"
+                    ? "border-accent-dim bg-accent-glow text-accent"
+                    : "border-border bg-surface-2 text-text-muted hover:border-border-strong hover:text-text"
                 }`}
               >
                 <span className="num">{shortDate(group.expiration)}</span>
@@ -121,8 +121,10 @@ export const ChainPage: FC = () => {
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
+          {/* the two halves are divided by a rule on the second, so the
+              segments read as one control rather than two loose buttons */}
           {isNarrow && (
-            <fieldset className="flex rounded-sm border border-border">
+            <fieldset className="flex overflow-hidden rounded-sm border border-border">
               <legend className="sr-only">Side</legend>
               {(["call", "put"] as const).map((option) => (
                 <button
@@ -130,9 +132,11 @@ export const ChainPage: FC = () => {
                   type="button"
                   onClick={() => setMobileSide(option)}
                   aria-pressed={mobileSide === option}
-                  className={`cursor-pointer px-2.5 py-1 text-xs capitalize transition-colors ${
-                    mobileSide === option ? "bg-accent-glow text-accent" : "text-text-muted"
-                  }`}
+                  className={`cursor-pointer px-3 py-2 text-xs capitalize transition-colors active:translate-y-px ${
+                    mobileSide === option
+                      ? "bg-accent-glow text-accent"
+                      : "bg-surface-2 text-text-muted hover:text-text"
+                  } ${option === "put" ? "border-l border-border" : ""}`}
                 >
                   {option}s
                 </button>

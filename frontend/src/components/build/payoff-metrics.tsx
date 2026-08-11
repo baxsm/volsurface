@@ -80,6 +80,11 @@ const Readout: FC<ReadoutProps> = ({
   );
 };
 
+/** one breakeven, tweened like the readouts beside it rather than snapping */
+const CountUpValue: FC<{ value: number; animate: boolean }> = ({ value, animate }) => (
+  <span>{useCountUp(value, animate).toFixed(2)}</span>
+);
+
 interface PayoffMetricsProps {
   payoff: PayoffResult;
 }
@@ -115,10 +120,25 @@ export const PayoffMetrics: FC<PayoffMetricsProps> = ({ payoff }) => {
         <dt className="text-xs text-text-faint">
           {payoff.breakevens.length === 1 ? "Breakeven" : "Breakevens"}
         </dt>
-        <dd className="num mt-1 text-md text-accent">
-          {payoff.breakevens.length === 0
-            ? "None"
-            : payoff.breakevens.map((value) => value.toFixed(2)).join("  ")}
+        {/* a breakeven is an underlying price, the same kind of number as a
+            strike, so it reads in the default tone rather than the accent. each
+            one tweens on its own, since the list length changes with the legs
+            and a single counter cannot span that. */}
+        <dd className="num mt-1 flex flex-wrap gap-x-3 text-md text-text">
+          {payoff.breakevens.length === 0 ? (
+            <span className="text-text-muted">None</span>
+          ) : (
+            payoff.breakevens.map((value, index) => (
+              <CountUpValue
+                // the list is positional: index is what identifies a slot here,
+                // and keying on the value would remount on every tween step
+                // biome-ignore lint/suspicious/noArrayIndexKey: slot position is the identity
+                key={index}
+                value={value}
+                animate={animate}
+              />
+            ))
+          )}
         </dd>
         <p className="mt-0.5 text-xs text-text-faint">
           {payoff.breakevens.length === 0 ? "never crosses zero" : "underlying at expiry"}

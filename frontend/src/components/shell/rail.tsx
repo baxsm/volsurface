@@ -46,7 +46,9 @@ const GLYPHS: Record<string, React.ReactNode> = {
   ),
 };
 
-const Glyph: FC<{ name: string; className?: string }> = ({ name, className }) => (
+/** shared with the mobile drawer, so both navs to the same five routes carry
+    the same icons rather than one being text-only */
+export const Glyph: FC<{ name: string; className?: string }> = ({ name, className }) => (
   <svg
     className={className}
     width="16"
@@ -109,7 +111,7 @@ export const Rail: FC = () => {
               end={link.to === "/"}
               title={collapsed ? link.label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-colors ${
+                `flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-colors active:translate-y-px ${
                   isActive
                     ? "bg-accent-glow text-accent"
                     : "text-text-muted hover:bg-surface-2 hover:text-text"
@@ -127,7 +129,7 @@ export const Rail: FC = () => {
         type="button"
         onClick={toggleRail}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="flex cursor-pointer items-center gap-3 border-t border-border px-4 py-3 text-sm text-text-faint transition-colors hover:text-text"
+        className="flex cursor-pointer items-center gap-3 border-t border-border px-4 py-3 text-sm text-text-faint transition-colors hover:bg-surface-2 hover:text-text active:translate-y-px"
       >
         <svg
           width="16"

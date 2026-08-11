@@ -1,6 +1,6 @@
 import { type FC, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
+import { EmptyState, ErrorState, LoadingState, Spinner } from "@/components/ui/states";
 import { ApiError } from "@/lib/api";
 import { longDate } from "@/lib/format";
 import { useDeleteStrategy, useStrategies } from "@/lib/queries";
@@ -40,7 +40,7 @@ export const StrategiesPage: FC = () => {
         action={
           <Link
             to="/build"
-            className="rounded-sm border border-border-strong px-4 py-2 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent"
+            className="rounded-sm border border-border-strong px-4 py-2 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
           >
             Open the builder
           </Link>
@@ -89,7 +89,7 @@ export const StrategiesPage: FC = () => {
                 <button
                   type="button"
                   onClick={() => void navigate(`/build?strategy=${strategy.id}`)}
-                  className="cursor-pointer rounded-sm border border-border-strong px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-accent-dim hover:text-accent"
+                  className="cursor-pointer rounded-sm border border-border-strong px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
                 >
                   Open
                 </button>
@@ -102,14 +102,15 @@ export const StrategiesPage: FC = () => {
                         remove.mutate(strategy.id, { onSettled: () => setConfirming(null) });
                       }}
                       disabled={remove.isPending}
-                      className="cursor-pointer rounded-sm bg-neg px-3 py-1.5 text-xs text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-sm bg-neg px-3 py-1.5 text-xs text-bg transition-colors hover:bg-neg/90 active:bg-neg/75 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neg"
                     >
+                      {remove.isPending && <Spinner className="size-3" />}
                       {remove.isPending ? "Deleting" : "Confirm"}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirming(null)}
-                      className="cursor-pointer rounded-sm px-2 py-1.5 text-xs text-text-faint transition-colors hover:text-text"
+                      className="cursor-pointer rounded-sm border border-transparent px-2 py-1.5 text-xs text-text-muted transition-colors hover:border-border-strong hover:text-text active:translate-y-px"
                     >
                       Cancel
                     </button>
@@ -119,7 +120,7 @@ export const StrategiesPage: FC = () => {
                     type="button"
                     onClick={() => setConfirming(strategy.id)}
                     aria-label={`Delete ${strategy.name}`}
-                    className="cursor-pointer rounded-sm border border-border px-3 py-1.5 text-xs text-text-faint transition-colors hover:border-neg hover:text-neg"
+                    className="cursor-pointer rounded-sm border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-neg hover:text-neg active:translate-y-px"
                   >
                     Delete
                   </button>

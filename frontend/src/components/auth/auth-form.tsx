@@ -1,5 +1,6 @@
 import { type FC, type ReactNode, useId, useState } from "react";
 import { z } from "zod";
+import { Spinner } from "@/components/ui/states";
 
 const emailSchema = z.email("Enter a valid email address.");
 const passwordSchema = z.string().min(12, "Password must be at least 12 characters.");
@@ -155,11 +156,16 @@ export const AuthForm: FC<AuthFormProps> = ({
         </p>
       )}
 
+      {/* hover:opacity keeps applying while disabled, which brightens the
+          button back up mid-request. brightness is what changes on press and on
+          hover instead, so the disabled dimming is never fought over. */}
       <button
         type="submit"
         disabled={pending}
-        className="w-full cursor-pointer rounded-sm bg-accent px-4 py-2.5 text-sm font-medium text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        aria-busy={pending}
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-sm bg-accent px-4 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-accent/90 active:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-accent"
       >
+        {pending && <Spinner />}
         {pending ? pendingLabel : submitLabel}
       </button>
 
