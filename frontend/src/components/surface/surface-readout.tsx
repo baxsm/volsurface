@@ -63,10 +63,13 @@ const NumberRow: FC<{
   label: string;
   value: number | null;
   format: (value: number | null) => string;
+  /** a count rather than a measurement, so it never shows a fraction mid-tween */
+  whole?: boolean;
   hint?: string;
-}> = ({ label, value, format, hint }) => {
+}> = ({ label, value, format, whole = false, hint }) => {
   const reduced = useReducedMotion();
-  const shown = useCountUp(value ?? 0, reduced !== true && value !== null);
+  const raw = useCountUp(value ?? 0, reduced !== true && value !== null);
+  const shown = whole ? Math.round(raw) : raw;
 
   return (
     <Row
@@ -174,11 +177,7 @@ export const SurfaceReadout: FC<SurfaceReadoutProps> = ({
           value={slice.rmse}
           format={(v) => decimal(v, 5)}
         />
-        <NumberRow
-          label="Quotes fitted"
-          value={slice.quoteCount}
-          format={(v) => integer(v === null ? null : Math.round(v))}
-        />
+        <NumberRow label="Quotes fitted" value={slice.quoteCount} format={integer} whole />
         <Row
           label="Quoted range"
           hint="log-moneyness"

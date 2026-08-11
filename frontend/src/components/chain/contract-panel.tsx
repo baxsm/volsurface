@@ -18,18 +18,22 @@ const Metric: FC<{
   label: string;
   value: number | null;
   format: (value: number | null) => string;
+  /** a count rather than a measurement: rounded every frame, never fractional */
+  whole?: boolean;
   tone?: string;
   hint?: string;
-}> = ({ label, value, format, tone = "text-text", hint }) => {
+}> = ({ label, value, format, whole = false, tone = "text-text", hint }) => {
   const reduced = useReducedMotion();
   const shown = useCountUp(value ?? 0, reduced !== true && value !== null);
+
+  // volume and open interest are contract counts. tweening one produced
+  // "3.986 contracts" on the way to 2, which is not a quantity that exists.
+  const display = value === null ? format(null) : format(whole ? Math.round(shown) : shown);
 
   return (
     <div>
       <dt className="text-xs text-text-faint">{label}</dt>
-      <dd className={`num mt-1 text-sm ${tone}`}>
-        {value === null ? format(null) : format(shown)}
-      </dd>
+      <dd className={`num mt-1 text-sm ${tone}`}>{display}</dd>
       {hint !== undefined && <p className="mt-0.5 text-xs text-text-faint">{hint}</p>}
     </div>
   );
@@ -121,8 +125,8 @@ export const ContractPanel: FC<ContractPanelProps> = ({
               <Metric label="Mark" value={contract.mark} format={money} />
               <Metric label="Spread" value={spread} format={money} />
               <Metric label="Last" value={contract.last} format={money} />
-              <Metric label="Volume" value={contract.volume} format={integer} />
-              <Metric label="Open interest" value={contract.openInterest} format={integer} />
+              <Metric label="Volume" value={contract.volume} format={integer} whole />
+              <Metric label="Open interest" value={contract.openInterest} format={integer} whole />
             </dl>
           </section>
 
