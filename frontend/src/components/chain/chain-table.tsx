@@ -98,16 +98,22 @@ const SideCells: FC<SideCellsProps> = ({
   // the selected side is tinted across all of its cells. the prop used to reach
   // aria-pressed and nothing else, so the row a user had just opened carried no
   // visual mark at all.
-  const selectedTint = selected ? "bg-accent-glow" : "";
+  //
+  // an opaque wash rather than the translucent accent glow, which vanished over
+  // the in-the-money shade these cells already carry. the shade is dropped when
+  // selected rather than layered under it, since two background utilities on one
+  // element resolve by stylesheet order and this one kept losing.
+  //
+  const cellShade = selected ? "bg-selected" : shade;
 
   const cell = (tone: string) => ({
     onClick: select,
-    className: `${base} cursor-pointer transition-colors ${selectedTint} ${tone}`,
+    className: `num px-2 py-1.5 text-right ${cellShade} cursor-pointer transition-colors ${tone}`,
   });
 
   return (
     <>
-      <td className={`num p-0 text-right transition-colors ${selectedTint} ${shade}`}>
+      <td className={`num p-0 text-right transition-colors ${cellShade}`}>
         <button
           type="button"
           onClick={select}

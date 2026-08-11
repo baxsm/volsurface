@@ -19,6 +19,11 @@
   /* the atm row wash pre-composited over the surface, for sticky cells that
      need an opaque background to hide the columns scrolling under them */
   --color-atm: #16302e;
+  /* the selected contract, pre-composited the same way. a translucent tint
+     disappeared over the in-the-money shade the cells already carry, and this
+     has to stay distinguishable from --color-atm: one means "nearest the
+     money", the other means "you opened this one". */
+  --color-selected: #1d3340;
 
   --color-pos: #3fb68b;
   --color-neg: #e0655b;
