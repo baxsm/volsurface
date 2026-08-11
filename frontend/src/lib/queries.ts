@@ -40,23 +40,42 @@ export const useSnapshots = (ticker: string | null) =>
     staleTime: 5 * 60_000,
   });
 
+/**
+ * chain and surface are described once and shared by the hook and the prefetch.
+ * a prefetch that passes a different key or staleTime than its hook writes a
+ * cache entry the hook never reads, which looks like it works and warms
+ * nothing, so there is deliberately only one definition of each.
+ */
+export const chainQuery = (snapshotId: string) => ({
+  queryKey: ["chain", snapshotId] as const,
+  queryFn: () => api<Chain>(`/api/snapshots/${snapshotId}/chain`),
+  staleTime: 5 * 60_000,
+});
+
+export const surfaceQuery = (snapshotId: string) => ({
+  queryKey: ["surface", snapshotId] as const,
+  queryFn: () => api<Surface>(`/api/snapshots/${snapshotId}/surface`),
+  staleTime: 5 * 60_000,
+});
+
+// the id is only null while the snapshot list is still resolving, and `enabled`
+// keeps queryFn from running until it is not. the empty string never reaches the
+// network, it just keeps the key shape identical to the prefetch's.
 export const useChain = (snapshotId: string | null) =>
-  useQuery({
-    queryKey: ["chain", snapshotId],
-    queryFn: () => api<Chain>(`/api/snapshots/${snapshotId}/chain`),
-    enabled: snapshotId !== null,
-    staleTime: 5 * 60_000,
-  });
+  useQuery({ ...chainQuery(snapshotId ?? ""), enabled: snapshotId !== null });
 
 export const useSurface = (snapshotId: string | null) =>
-  useQuery({
-    queryKey: ["surface", snapshotId],
-    queryFn: () => api<Surface>(`/api/snapshots/${snapshotId}/surface`),
-    enabled: snapshotId !== null,
-    staleTime: 5 * 60_000,
-  });
+  useQuery({ ...surfaceQuery(snapshotId ?? ""), enabled: snapshotId !== null });
 
 export const strategiesKey = ["strategies"] as const;
+
+/**
+ * shorter than the chain's five minutes: this list is the user's own writes, so
+ * it should follow a save made in another tab reasonably soon. it is not zero
+ * because every mutation here already invalidates the key, which means a save or
+ * a delete in this tab refreshes it immediately regardless.
+ */
+const OWNED_STALE_TIME = 30_000;
 
 export const useStrategies = (enabled: boolean) =>
   useQuery({
@@ -64,6 +83,7 @@ export const useStrategies = (enabled: boolean) =>
     queryFn: () =>
       api<{ strategies: SavedStrategySummary[] }>("/api/strategies").then((r) => r.strategies),
     enabled,
+    staleTime: OWNED_STALE_TIME,
   });
 
 export const useStrategy = (id: string | null) =>
@@ -71,6 +91,7 @@ export const useStrategy = (id: string | null) =>
     queryKey: ["strategy", id],
     queryFn: () => api<SavedStrategy>(`/api/strategies/${id}`),
     enabled: id !== null,
+    staleTime: OWNED_STALE_TIME,
   });
 
 export interface SaveStrategyInput {

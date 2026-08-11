@@ -11,6 +11,7 @@ import { sliceAtExpiry, sliceAtMoneyness } from "@/lib/surface-geometry";
 import type { SurfaceGrid } from "@/lib/types";
 import { useActiveSnapshot } from "@/lib/use-active-snapshot";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { usePrefetchSnapshot } from "@/lib/use-prefetch-snapshot";
 
 /**
  * three and r3f are around a megabyte and this is the only view that draws in
@@ -48,6 +49,9 @@ const Toggle: FC<{
 
 export const SurfacePage: FC = () => {
   const { ticker, snapshotId, snapshots, symbols } = useActiveSnapshot();
+  // the chain is the same snapshot read another way, and it is the expensive
+  // one, so it warms while the surface is being looked at
+  usePrefetchSnapshot(snapshotId, "chain");
   const setSnapshotId = useAppStore((s) => s.setSnapshotId);
   const surface = useSurface(snapshotId);
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");

@@ -9,9 +9,12 @@ import { useAppStore } from "@/lib/store";
 import type { Contract } from "@/lib/types";
 import { useActiveSnapshot } from "@/lib/use-active-snapshot";
 import { useIsNarrow } from "@/lib/use-media-query";
+import { usePrefetchSnapshot } from "@/lib/use-prefetch-snapshot";
 
 export const ChainPage: FC = () => {
   const { snapshotId, symbols, snapshots } = useActiveSnapshot();
+  // the surface is the same snapshot fitted, so it warms while the ladder is read
+  usePrefetchSnapshot(snapshotId, "surface");
   const chain = useChain(snapshotId);
   const showVendor = useAppStore((s) => s.showVendor);
   const setShowVendor = useAppStore((s) => s.setShowVendor);
