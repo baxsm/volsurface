@@ -1,6 +1,7 @@
 import { OrbitControls } from "@react-three/drei";
 import { type FC, useEffect, useMemo } from "react";
 import * as THREE from "three";
+import { sceneColors } from "@/lib/scene-colors";
 import {
   colOffset,
   ivHeight,
@@ -39,7 +40,12 @@ export const Stage: FC<{ bounds: SurfaceBounds }> = () => {
   }, [lines]);
 
   const material = useMemo(
-    () => new THREE.LineBasicMaterial({ color: "#21252c", transparent: true, opacity: 0.55 }),
+    () =>
+      new THREE.LineBasicMaterial({
+        color: sceneColors().border,
+        transparent: true,
+        opacity: 0.55,
+      }),
     [],
   );
 
@@ -64,7 +70,7 @@ export const SlicePlane: FC<SlicePlaneProps> = ({ grid, bounds, axis, index }) =
   const material = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
-        color: "#35e0c8",
+        color: sceneColors().accent,
         transparent: true,
         // barely there. a solid plane sized to the stage reads as a wall
         // standing behind the surface rather than a cut taken through it, and
@@ -78,7 +84,12 @@ export const SlicePlane: FC<SlicePlaneProps> = ({ grid, bounds, axis, index }) =
   );
 
   const edgeMaterial = useMemo(
-    () => new THREE.LineBasicMaterial({ color: "#35e0c8", transparent: true, opacity: 0.55 }),
+    () =>
+      new THREE.LineBasicMaterial({
+        color: sceneColors().accent,
+        transparent: true,
+        opacity: 0.55,
+      }),
     [],
   );
 
@@ -183,7 +194,11 @@ export const SlicePlane: FC<SlicePlaneProps> = ({ grid, bounds, axis, index }) =
     () =>
       new THREE.Line(
         cutGeometry,
-        new THREE.LineBasicMaterial({ color: "#f2e9a0", transparent: true, opacity: 0.95 }),
+        new THREE.LineBasicMaterial({
+          color: sceneColors().rampPeak,
+          transparent: true,
+          opacity: 0.95,
+        }),
       ),
     [cutGeometry],
   );
@@ -224,8 +239,12 @@ export const StudioLights: FC = () => (
   <>
     <ambientLight intensity={0.32} />
     <directionalLight position={[3.5, 5, 2.5]} intensity={0.85} color="#ffffff" />
+    {/* the rim is deliberately off-palette: a cool blue behind the mesh
+        separates its far edge from the background, which the teal accent cannot
+        do because the mesh is already teal there. a light colour, not a ui one,
+        so it is not a token. */}
     <directionalLight position={[-4, 2.5, -3]} intensity={0.45} color="#7fd6ff" />
-    <directionalLight position={[0, -3, 1]} intensity={0.14} color="#35e0c8" />
+    <directionalLight position={[0, -3, 1]} intensity={0.14} color={sceneColors().accent} />
   </>
 );
 

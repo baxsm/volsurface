@@ -1,9 +1,11 @@
 import { Canvas } from "@react-three/fiber";
 import { type FC, useMemo } from "react";
 import { decimal, percent } from "@/lib/format";
+import { sceneColors } from "@/lib/scene-colors";
 import {
   ivAtHeight,
   ivColorPosition,
+  rampHex,
   type SurfaceBounds,
   surfaceBounds,
 } from "@/lib/surface-geometry";
@@ -65,11 +67,15 @@ const AxisLegend: FC<{ grid: SurfaceGrid; bounds: SurfaceBounds }> = ({ grid, bo
       <div className="mt-4 flex items-center gap-2">
         <span className="num text-xs text-text-faint">{percent(bounds.minIv, 0)}</span>
         <div className="relative">
+          {/* sampled from the ramp the mesh actually paints with, rather than
+              four hexes transcribed from it by hand - those were a copy that
+              would silently stop matching the moment RAMP changed */}
           <div
             className="h-1.5 w-28 rounded-full"
             style={{
-              background:
-                "linear-gradient(90deg, #12233a 0%, #2e8aa6 33%, #6fe9c8 67%, #f2e9a0 100%)",
+              background: `linear-gradient(90deg, ${[0, 0.33, 0.67, 1]
+                .map((stop) => `${rampHex(stop)} ${Math.round(stop * 100)}%`)
+                .join(", ")})`,
             }}
           />
           {/* one tick, not a scale: the ramp is not linear in vol, so the median
@@ -114,7 +120,7 @@ export const SurfaceCanvas: FC<SurfaceCanvasProps> = ({
         gl={{ antialias: true, alpha: true }}
         // r3f keeps the default WebGLRenderer, whose context is released with the
         // canvas element on unmount; geometries and materials dispose themselves
-        onCreated={({ gl }) => gl.setClearColor("#0a0b0d", 0)}
+        onCreated={({ gl }) => gl.setClearColor(sceneColors().bg, 0)}
       >
         <StudioLights />
         {bounds !== null && <Stage bounds={bounds} />}

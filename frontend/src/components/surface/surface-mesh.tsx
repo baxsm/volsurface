@@ -1,6 +1,7 @@
 import { useFrame } from "@react-three/fiber";
 import { type FC, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { sceneColors } from "@/lib/scene-colors";
 import {
   buildSurfaceMesh,
   canMorph,
@@ -63,7 +64,7 @@ export const SurfaceMeshView: FC<SurfaceMeshViewProps> = ({
   const wireMaterial = useDisposable(
     () =>
       new THREE.LineBasicMaterial({
-        color: new THREE.Color("#35e0c8"),
+        color: new THREE.Color(sceneColors().accent),
         transparent: true,
         opacity: 0.16,
       }),
@@ -75,7 +76,7 @@ export const SurfaceMeshView: FC<SurfaceMeshViewProps> = ({
   const edgeMaterial = useDisposable(
     () =>
       new THREE.LineBasicMaterial({
-        color: new THREE.Color("#6fe9c8"),
+        color: new THREE.Color(sceneColors().rampTop),
         transparent: true,
         opacity: 0.55,
       }),

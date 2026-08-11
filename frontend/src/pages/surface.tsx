@@ -196,7 +196,12 @@ export const SurfacePage: FC = () => {
       <div className="relative min-h-[26rem] flex-1 lg:min-h-0">
         <div className="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center justify-between gap-2 p-4">
           <div>
-            <h1 className="text-md text-text">{snapshot.ticker} volatility surface</h1>
+            {/* text-md rather than the text-lg the other pages title with: this
+                one is overlaid on the canvas, where a larger heading crowds the
+                mesh it is labelling */}
+            <h1 className="text-md tracking-tight text-text">
+              {snapshot.ticker} volatility surface
+            </h1>
             <p className="num text-xs text-text-faint">
               {longDate(snapshot.tradeDate)} &middot; spot {money(snapshot.underlyingPrice)}{" "}
               &middot; {slices.length} fitted expiries
