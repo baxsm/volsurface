@@ -1,9 +1,11 @@
 import { X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type FC, useEffect } from "react";
+import { type FC, useEffect, useRef } from "react";
 import { decimal, integer, longDate, money, percent } from "@/lib/format";
 import type { Contract, SnapshotMeta } from "@/lib/types";
 import { useCountUp } from "@/lib/use-count-up";
+import { useFocusTrap } from "@/lib/use-focus-trap";
+import { useIsNarrow } from "@/lib/use-media-query";
 
 /**
  * one figure in the panel.
@@ -65,6 +67,14 @@ export const ContractPanel: FC<ContractPanelProps> = ({
   onClose,
 }) => {
   const reduced = useReducedMotion();
+  const panelRef = useRef<HTMLElement>(null);
+  const isNarrow = useIsNarrow();
+
+  // only a modal on a phone, where it covers the whole viewport with a tabbable
+  // table still underneath. on a desktop it is a side panel beside that table
+  // and the user is meant to keep clicking rows, so trapping there would fight
+  // the interaction rather than protect it.
+  useFocusTrap(panelRef, contract !== null && isNarrow);
 
   useEffect(() => {
     if (contract === null) return;
@@ -82,7 +92,9 @@ export const ContractPanel: FC<ContractPanelProps> = ({
       {contract !== null && (
         <motion.aside
           key="contract-panel"
+          ref={panelRef}
           aria-label="Contract detail"
+          {...(isNarrow ? { role: "dialog" as const, "aria-modal": true } : {})}
           initial={reduced === true ? false : { x: "100%" }}
           animate={{ x: 0 }}
           exit={reduced === true ? { opacity: 0 } : { x: "100%" }}

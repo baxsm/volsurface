@@ -9,7 +9,11 @@ afterEach(() => {
 // jsdom implements neither, and motion plus the chain's atm centring both call
 // them on mount. without these every render throws instead of failing on the
 // thing under test.
-if (!("matchMedia" in window)) {
+// the guard tests for a callable, not for the key: jsdom declares matchMedia
+// but leaves it undefined, so an `in` check passes and the polyfill never
+// installs - which only surfaced when a component outside the chain page
+// started calling it
+if (typeof window.matchMedia !== "function") {
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: (query: string) => ({

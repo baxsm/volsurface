@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type FC, useEffect } from "react";
+import { type FC, useEffect, useRef } from "react";
 import { NavLink } from "react-router";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { Logo } from "./logo";
 // the same five routes the desktop rail lists, so the two navs cannot drift
 import { LINKS } from "./rail";
@@ -15,6 +16,11 @@ export const MobileNav: FC<MobileNavProps> = ({ open, onClose }) => {
   // durations. motion drives these springs from javascript, so they run at full
   // travel unless the component opts out itself.
   const reduced = useReducedMotion();
+  const panelRef = useRef<HTMLElement>(null);
+
+  // the drawer covers the page while everything under it stays tabbable, so
+  // without this the tab key walks out of the open dialog into hidden content
+  useFocusTrap(panelRef, open);
 
   useEffect(() => {
     if (!open) return;
@@ -40,7 +46,10 @@ export const MobileNav: FC<MobileNavProps> = ({ open, onClose }) => {
             className="absolute inset-0 h-full w-full cursor-pointer bg-black/60"
           />
           <motion.nav
+            ref={panelRef}
             aria-label="Main"
+            role="dialog"
+            aria-modal="true"
             initial={reduced === true ? false : { x: "-100%" }}
             animate={{ x: 0 }}
             exit={reduced === true ? { opacity: 0 } : { x: "-100%" }}

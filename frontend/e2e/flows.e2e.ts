@@ -213,3 +213,71 @@ test("counts stay whole while the panel tweens between contracts", async ({ page
     await page.waitForTimeout(30);
   }
 });
+
+test("the mobile drawer keeps focus and gives it back", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/chain");
+  await expect(page.getByRole("table")).toBeVisible();
+
+  await page.getByLabel("Open navigation").click();
+  const drawer = page.getByRole("dialog", { name: "Main" });
+  await expect(drawer).toBeVisible();
+
+  const inside = () =>
+    page.evaluate(() => {
+      const el = document.querySelector('nav[role="dialog"]');
+      return el?.contains(document.activeElement) === true;
+    });
+
+  // it covers the page while everything under it stays tabbable, so without a
+  // trap the tab key walks into content the user cannot see
+  expect(await inside()).toBe(true);
+  for (let i = 0; i < 14; i++) {
+    await page.keyboard.press("Tab");
+    expect(await inside()).toBe(true);
+  }
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press("Shift+Tab");
+    expect(await inside()).toBe(true);
+  }
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(page.getByLabel("Open navigation")).toBeFocused();
+});
+
+test("the contract panel traps focus only where it is modal", async ({ page }) => {
+  // on a phone it covers the viewport, so it is a dialog and holds focus
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/chain");
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.waitForTimeout(600);
+
+  const opener = page.locator("tr[data-atm=true]").getByRole("button").first();
+  await opener.click();
+  await expect(page.getByRole("dialog", { name: "Contract detail" })).toBeVisible();
+
+  const inside = () =>
+    page.evaluate(() => {
+      const el = document.querySelector('aside[role="dialog"]');
+      return el?.contains(document.activeElement) === true;
+    });
+
+  expect(await inside()).toBe(true);
+  for (let i = 0; i < 16; i++) {
+    await page.keyboard.press("Tab");
+    expect(await inside()).toBe(true);
+  }
+  await page.keyboard.press("Escape");
+  await expect(opener).toBeFocused();
+
+  // on a desktop it sits beside a table the user keeps clicking, so trapping
+  // there would fight the interaction rather than protect it
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/chain");
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.waitForTimeout(600);
+  await page.locator("tr[data-atm=true]").getByRole("button").first().click();
+  await expect(page.getByRole("complementary", { name: "Contract detail" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Contract detail" })).toHaveCount(0);
+});
