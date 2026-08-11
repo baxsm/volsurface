@@ -104,3 +104,27 @@ test("expanding the rail is as steady as collapsing it", async ({ page }) => {
   const jumps = xs.slice(1).filter((x, i) => Math.abs(x - (xs[i] as number)) > 3);
   expect(jumps).toEqual([]);
 });
+
+test("the collapsed rail centres its icons", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("navigation", { name: "Main" })).toBeVisible();
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  await page.waitForTimeout(500);
+
+  // the rail narrowed around a fixed left inset, which was right while it was
+  // wide and left every glyph 6px off-centre once it was not. measured rather
+  // than eyeballed: this is exactly the class of bug a screenshot hides.
+  const gaps = await page.evaluate(() => {
+    const nav = document.querySelector("nav[aria-label='Main']");
+    if (nav === null) return [];
+    const bounds = nav.getBoundingClientRect();
+    const marks = [...nav.querySelectorAll("a svg"), ...nav.querySelectorAll("button svg")];
+    return marks.map((mark) => {
+      const box = mark.getBoundingClientRect();
+      return Math.round(box.left - bounds.left - (bounds.right - box.right));
+    });
+  });
+
+  expect(gaps.length).toBeGreaterThan(5);
+  for (const gap of gaps) expect(Math.abs(gap)).toBeLessThanOrEqual(1);
+});
