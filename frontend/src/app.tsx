@@ -11,6 +11,7 @@ import { SettingsPage } from "@/pages/settings";
 import { SignInPage } from "@/pages/sign-in";
 import { SignUpPage } from "@/pages/sign-up";
 import { StrategiesPage } from "@/pages/strategies";
+import { SurfacePage } from "@/pages/surface";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,15 +49,7 @@ export const App: FC = () => (
         />
 
         <Route element={<AppLayout />}>
-          <Route
-            index
-            element={
-              <NotBuiltYet
-                title="Surface"
-                detail="The 3D volatility surface lands in a later phase. The chain view is live now."
-              />
-            }
-          />
+          <Route index element={<SurfacePage />} />
           <Route path="chain" element={<ChainPage />} />
           <Route path="build" element={<BuildPage />} />
           <Route

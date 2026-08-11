@@ -57,6 +57,45 @@ export interface Chain {
   expirations: ExpiryGroup[];
 }
 
+export interface SviParams {
+  a: number;
+  b: number;
+  rho: number;
+  m: number;
+  sigma: number;
+}
+
+export interface SviSlice {
+  expiration: string;
+  t: number;
+  params: SviParams;
+  quoteCount: number;
+  rmse: number;
+  iterations: number;
+  butterflyArbFree: boolean;
+  kMin: number;
+  kMax: number;
+  calendarRepaired?: boolean;
+}
+
+export interface SurfaceGrid {
+  moneyness: number[];
+  expiries: string[];
+  years: number[];
+  strikes: number[][];
+  /** null where the slice had no quotes to support that moneyness */
+  iv: (number | null)[][];
+}
+
+export interface Surface {
+  snapshot: SnapshotMeta;
+  slices: SviSlice[];
+  grid: SurfaceGrid;
+  calendarArbFree: boolean;
+  skippedExpirations: string[];
+  computedAt: string;
+}
+
 export interface SavedStrategySummary {
   id: string;
   name: string;

@@ -43,9 +43,13 @@ export const atmStrike = (rows: StrikeRow[], spot: number | null): number | null
 
 const COLUMNS = ["Vol", "OI", "Bid", "Ask", "Delta", "IV"] as const;
 
-// the column row sticks directly under the calls/strike/puts row. one pixel
-// short of that row's height on purpose: landing exactly on it leaves a
-// sub-pixel seam that scrolling rows show through.
+// the column row sticks directly under the calls/strike/puts row. that row is
+// pinned to an exact height rather than left to its padding, because the offset
+// below has to match it: measured, it came out at 28.5px against a hardcoded
+// 28px, and the half pixel clipped the tops of the column labels.
+// written out rather than built from a constant: tailwind scans the source as
+// text, so a class assembled from a template literal is never generated
+const GROUP_ROW_H = "h-[28px]";
 const ROW_ONE_H = "top-[28px]";
 
 interface SideCellsProps {
@@ -170,8 +174,7 @@ export const ChainTable: FC<ChainTableProps> = ({
   // are not reliable containing blocks, and the group row would scroll under
   // the column row instead of sticking above it. ROW_ONE_H is the measured
   // height of the group row, which becomes the second row's offset.
-  const groupCell =
-    "sticky top-0 z-20 bg-surface-2 px-2 py-1.5 text-xs font-normal text-text-faint";
+  const groupCell = `sticky top-0 z-20 ${GROUP_ROW_H} bg-surface-2 px-2 py-0 text-xs font-normal text-text-faint`;
   const columnCell = `sticky ${ROW_ONE_H} z-20 bg-surface-2 px-2 py-1.5 text-right font-normal`;
 
   const strikeHeader = (

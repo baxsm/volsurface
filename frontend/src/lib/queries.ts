@@ -8,6 +8,7 @@ import type {
   SavedStrategy,
   SavedStrategySummary,
   SnapshotSummary,
+  Surface,
   TrackedSymbol,
 } from "./types";
 
@@ -43,6 +44,14 @@ export const useChain = (snapshotId: string | null) =>
   useQuery({
     queryKey: ["chain", snapshotId],
     queryFn: () => api<Chain>(`/api/snapshots/${snapshotId}/chain`),
+    enabled: snapshotId !== null,
+    staleTime: 5 * 60_000,
+  });
+
+export const useSurface = (snapshotId: string | null) =>
+  useQuery({
+    queryKey: ["surface", snapshotId],
+    queryFn: () => api<Surface>(`/api/snapshots/${snapshotId}/surface`),
     enabled: snapshotId !== null,
     staleTime: 5 * 60_000,
   });

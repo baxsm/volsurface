@@ -1,18 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
+import { signUp as createAccount } from "./accounts";
 
-const uniqueEmail = (tag: string) => `e2e-${tag}-${process.pid}-${Date.now()}@volsurface.test`;
-const PASSWORD = "e2e-password-2026";
-
-const signUp = async (page: Page, tag: string): Promise<string> => {
-  const email = uniqueEmail(tag);
-  await page.goto("/sign-up");
-  await page.getByLabel("Name").fill("Builder");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL("/");
-  return email;
-};
+const signUp = (page: Page, tag: string): Promise<string> => createAccount(page, "Builder", tag);
 
 /** the curve is sprung, so a read taken mid-flight is not the settled shape */
 const settle = async (page: Page) => {

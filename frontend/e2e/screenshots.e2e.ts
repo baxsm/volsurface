@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { signUp } from "./accounts";
 
 // verification artifacts, gitignored. captured so the assembled screens can be
 // reviewed rather than assumed correct because the components render.
@@ -36,6 +37,68 @@ test("desktop shell and chain", async ({ page }) => {
   await settle(page, 250);
   await page.screenshot({ path: `${DIR}/03-chain-vendor.png` });
   await page.getByLabel("Vendor IV").uncheck();
+});
+
+/** the mesh only exists once r3f has measured the canvas and drawn frames, so
+    a screenshot taken on load would capture an empty stage */
+const waitForSurface = async (page: import("@playwright/test").Page) => {
+  await expect(page.locator("canvas")).toBeVisible();
+  await page.waitForFunction(
+    () => {
+      const canvas = document.querySelector("canvas");
+      return canvas !== null && canvas.width > 300;
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
+  await page.waitForTimeout(1400);
+};
+
+test("surface at desktop, orbited, sliced, and on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await page.goto("/");
+  await waitForSurface(page);
+  await page.screenshot({ path: `${DIR}/21-surface-desktop.png` });
+
+  // drag to orbit, which is the interaction the whole view is built around
+  const canvas = page.locator("canvas");
+  const box = await canvas.boundingBox();
+  if (box !== null) {
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 170, box.y + box.height / 2 + 70, { steps: 22 });
+    await page.mouse.up();
+    await page.waitForTimeout(900);
+    await page.screenshot({ path: `${DIR}/22-surface-orbited.png` });
+  }
+
+  // sweep the slice plane to a back expiry and read the term cut
+  const expirySlider = page.getByLabel("Expiry to slice");
+  await expirySlider.focus();
+  for (let i = 0; i < 9; i++) await expirySlider.press("ArrowRight");
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: `${DIR}/23-surface-slice-back.png` });
+
+  await page.getByRole("button", { name: "Term" }).click();
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: `${DIR}/24-surface-term-cut.png` });
+
+  await page.getByRole("button", { name: "Smile" }).click();
+  await page.getByRole("button", { name: "Wireframe" }).click();
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: `${DIR}/25-surface-no-wireframe.png` });
+  await page.getByRole("button", { name: "Wireframe" }).click();
+
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.goto("/");
+  await waitForSurface(page);
+  await page.screenshot({ path: `${DIR}/26-surface-tablet.png` });
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  await waitForSurface(page);
+  await page.screenshot({ path: `${DIR}/27-surface-mobile.png`, fullPage: true });
 });
 
 test("auth pages", async ({ page }) => {
@@ -84,14 +147,8 @@ test("error state when the api is unreachable", async ({ page }) => {
   await page.screenshot({ path: `${DIR}/10-chain-error.png` });
 });
 
-const signUpForShots = async (page: import("@playwright/test").Page) => {
-  await page.goto("/sign-up");
-  await page.getByLabel("Name").fill("Screenshot Runner");
-  await page.getByLabel("Email").fill(`shots-${process.pid}-${Date.now()}@volsurface.test`);
-  await page.getByLabel("Password").fill("e2e-password-2026");
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL("/");
-};
+const signUpForShots = (page: import("@playwright/test").Page) =>
+  signUp(page, "Screenshot Runner", "shots");
 
 test("builder across widths and presets", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
