@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "motion/react";
 import type { FC } from "react";
 import { NavLink } from "react-router";
 import { useAppStore } from "@/lib/store";
@@ -76,7 +75,9 @@ export const Rail: FC = () => {
         collapsed ? "w-14" : "w-52"
       }`}
     >
-      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
+      {/* the logo sits at the same left inset as the glyphs below it, so the
+          whole rail narrows around one fixed column rather than re-centring */}
+      <div className="flex h-14 items-center gap-2.5 overflow-hidden border-b border-border pl-[13px]">
         <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" className="shrink-0">
           <title>volsurface</title>
           <path
@@ -88,19 +89,13 @@ export const Rail: FC = () => {
             strokeLinejoin="round"
           />
         </svg>
-        <AnimatePresence initial={false}>
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.12 }}
-              className="truncate text-sm font-medium tracking-tight"
-            >
-              volsurface
-            </motion.span>
-          )}
-        </AnimatePresence>
+        <span
+          className={`truncate text-sm font-medium tracking-tight transition-opacity duration-150 ${
+            collapsed ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          volsurface
+        </span>
       </div>
 
       <ul className="flex flex-1 flex-col gap-0.5 p-2">
@@ -111,15 +106,30 @@ export const Rail: FC = () => {
               end={link.to === "/"}
               title={collapsed ? link.label : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-sm px-3 py-2 text-sm transition-colors active:translate-y-px ${
+                `flex items-center gap-3 overflow-hidden rounded-sm py-2 pl-[15px] text-sm transition-colors active:translate-y-px ${
                   isActive
                     ? "bg-accent-glow text-accent"
                     : "text-text-muted hover:bg-surface-2 hover:text-text"
-                } ${collapsed ? "justify-center px-0" : ""}`
+                }`
               }
             >
+              {/* the glyph keeps one fixed left inset in both states, so the rail
+                  narrowing never moves it. centring it on collapse instead made
+                  it jump 76px right on the first frame and crawl back over the
+                  whole 200ms, because justify-center applied while the rail was
+                  still full width. */}
               <Glyph name={link.key} className="shrink-0" />
-              {!collapsed && <span className="truncate">{link.label}</span>}
+              {/* the label stays mounted and slides out under the clip. dropping
+                  it from the tree on click made the text vanish a frame before
+                  the rail had moved at all. */}
+              <span
+                aria-hidden={collapsed}
+                className={`truncate transition-opacity duration-150 ${
+                  collapsed ? "opacity-0" : "opacity-100"
+                }`}
+              >
+                {link.label}
+              </span>
             </NavLink>
           </li>
         ))}
@@ -129,7 +139,7 @@ export const Rail: FC = () => {
         type="button"
         onClick={toggleRail}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="flex cursor-pointer items-center gap-3 border-t border-border px-4 py-3 text-sm text-text-faint transition-colors hover:bg-surface-2 hover:text-text active:translate-y-px"
+        className="flex cursor-pointer items-center gap-3 overflow-hidden border-t border-border py-3 pl-[19px] text-sm text-text-faint transition-colors hover:bg-surface-2 hover:text-text active:translate-y-px"
       >
         <svg
           width="16"
@@ -145,7 +155,11 @@ export const Rail: FC = () => {
         >
           <path d="M6 4l4 4-4 4" />
         </svg>
-        {!collapsed && <span>Collapse</span>}
+        <span
+          className={`transition-opacity duration-150 ${collapsed ? "opacity-0" : "opacity-100"}`}
+        >
+          Collapse
+        </span>
       </button>
     </nav>
   );
