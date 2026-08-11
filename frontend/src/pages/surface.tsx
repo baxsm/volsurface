@@ -47,7 +47,7 @@ const Toggle: FC<{
 );
 
 export const SurfacePage: FC = () => {
-  const { ticker, snapshotId, snapshots } = useActiveSnapshot();
+  const { ticker, snapshotId, snapshots, symbols } = useActiveSnapshot();
   const setSnapshotId = useAppStore((s) => s.setSnapshotId);
   const surface = useSurface(snapshotId);
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
@@ -131,6 +131,22 @@ export const SurfacePage: FC = () => {
     }
     return best;
   }, [grid, sliceAxis, safeIndex]);
+
+  // a failed symbol or snapshot load has to say so. without this the page sits
+  // on "Loading symbols" forever, because ticker stays null when the list never
+  // arrives, and a dead server reads as a slow one. chain.tsx does the same.
+  if (symbols.isError || snapshots.isError) {
+    return (
+      <ErrorState
+        title="Could not load symbols"
+        message="The server did not answer. Check that it is running and try again."
+        onRetry={() => {
+          void symbols.refetch();
+          void snapshots.refetch();
+        }}
+      />
+    );
+  }
 
   if (ticker === null && snapshots.isPending) {
     return <LoadingState label="Loading symbols" rows={4} />;

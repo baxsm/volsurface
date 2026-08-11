@@ -154,3 +154,16 @@ test("leaving the surface releases its webgl context", async ({ page }) => {
 
   await expect(page.locator("canvas")).toHaveCount(1);
 });
+
+test("a dead api shows an error on the surface, not a permanent spinner", async ({ page }) => {
+  await page.route("**/api/**", (route) => route.abort());
+
+  // the surface page kept ticker null while the symbol list never arrived, so
+  // it sat on "Loading symbols" forever and a dead server read as a slow one.
+  // /chain had this covered and / did not, which is how it survived.
+  await page.goto("/");
+  await expect(page.getByRole("alert")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Could not load symbols")).toBeVisible();
+  await expect(page.getByText("Loading symbols")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+});
