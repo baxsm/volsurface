@@ -168,7 +168,24 @@ export const ChainTable: FC<ChainTableProps> = ({
   // reads, so the linter cannot see why it belongs here.
   // biome-ignore lint/correctness/useExhaustiveDependencies: atm is the intended trigger
   useEffect(() => {
-    atmRef.current?.scrollIntoView({ block: "center" });
+    const row = atmRef.current;
+    if (row === null) return;
+
+    // the table's own scroller is moved directly rather than through
+    // scrollIntoView, which walks every scrollable ancestor. one of those is
+    // <main>, which is overflow-hidden and so has no way to scroll back - it
+    // kept the contract panel's header clipped off the top of the viewport for
+    // as long as the panel was open.
+    let scroller = row.parentElement;
+    while (scroller !== null && scroller.scrollHeight <= scroller.clientHeight) {
+      scroller = scroller.parentElement;
+    }
+    if (scroller === null) return;
+
+    const rowBox = row.getBoundingClientRect();
+    const viewBox = scroller.getBoundingClientRect();
+    const delta = rowBox.top - viewBox.top - (viewBox.height - rowBox.height) / 2;
+    scroller.scrollTop += delta;
   }, [atm]);
 
   const headers = showVendor ? [...COLUMNS, "Vendor"] : [...COLUMNS];

@@ -167,3 +167,49 @@ test("a dead api shows an error on the surface, not a permanent spinner", async 
   await expect(page.getByText("Loading symbols")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
 });
+
+test("opening a contract does not scroll the shell out of view", async ({ page }) => {
+  await page.goto("/chain");
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.waitForTimeout(800);
+
+  await page.locator("tr[data-atm=true]").getByRole("button").first().click();
+  await expect(page.getByRole("complementary", { name: "Contract detail" })).toBeVisible();
+  await page.waitForTimeout(500);
+
+  // <main> is overflow-hidden, so anything that scrolls it can never scroll it
+  // back. scrollIntoView used to walk up to it and leave the panel's header
+  // clipped off the top for as long as the panel stayed open.
+  const shell = await page.evaluate(() => document.querySelector("main")?.scrollTop ?? -1);
+  expect(shell).toBe(0);
+
+  const heading = page.getByRole("complementary", { name: "Contract detail" }).locator("p").first();
+  const box = await heading.boundingBox();
+  expect(box?.y ?? 0).toBeGreaterThan(56);
+});
+
+test("counts stay whole while the panel tweens between contracts", async ({ page }) => {
+  await page.goto("/chain");
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.waitForTimeout(800);
+
+  const buttons = page.locator("tbody button[aria-pressed]");
+  await buttons.nth(20).click();
+  await expect(page.getByRole("complementary", { name: "Contract detail" })).toBeVisible();
+  await page.waitForTimeout(500);
+
+  const volume = () =>
+    page.evaluate(() => {
+      const labels = [...document.querySelectorAll("aside dt")];
+      const found = labels.find((label) => label.textContent?.trim() === "Volume");
+      return found?.nextElementSibling?.textContent?.trim() ?? "";
+    });
+
+  // volume and open interest are contract counts. tweening one produced
+  // "3.986" on the way to 2, a quantity that does not exist.
+  await buttons.nth(26).click();
+  for (let i = 0; i < 10; i++) {
+    expect(await volume()).not.toContain(".");
+    await page.waitForTimeout(30);
+  }
+});
