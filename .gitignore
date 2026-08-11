@@ -42,6 +42,10 @@ e2e/screenshots/
 playwright-report/
 test-results/
 
+# the full screen tour is for reviewing the app, not for shipping. the readme's
+# own images live in frontend/public/readme and are committed.
+**/public/tour/
+
 # logs
 *.log
 npm-debug.log*
