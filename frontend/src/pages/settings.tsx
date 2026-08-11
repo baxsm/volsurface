@@ -1,17 +1,46 @@
 import { Check } from "lucide-react";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { PageShell } from "@/components/shell/page-shell";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
-import { useSession, useSymbols } from "@/lib/queries";
+import { ErrorState, LoadingState } from "@/components/ui/states";
+import { longDate } from "@/lib/format";
+import { useSession, useSnapshots, useSymbols } from "@/lib/queries";
 import { useAppStore } from "@/lib/store";
+
+/**
+ * one settings group: its name and purpose on the left, the controls on the
+ * right. the label column is what keeps a short section from reading as an
+ * abandoned line of text floating in an empty page, and it gives every setting
+ * somewhere to explain itself rather than relying on the control's own wording.
+ */
+const Section: FC<{ title: string; hint: string; children: ReactNode }> = ({
+  title,
+  hint,
+  children,
+}) => (
+  <section className="grid gap-x-10 gap-y-4 border-t border-border py-8 md:grid-cols-[16rem_1fr]">
+    <div>
+      <h2 className="text-sm text-text">{title}</h2>
+      <p className="mt-1 text-xs leading-relaxed text-text-muted">{hint}</p>
+    </div>
+    <div className="min-w-0">{children}</div>
+  </section>
+);
+
+const Field: FC<{ label: string; children: ReactNode }> = ({ label, children }) => (
+  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5">
+    <dt className="text-sm text-text-muted">{label}</dt>
+    <dd className="min-w-0 text-sm text-text">{children}</dd>
+  </div>
+);
 
 export const SettingsPage: FC = () => {
   const session = useSession();
   const symbols = useSymbols();
   const ticker = useAppStore((s) => s.ticker);
   const setTicker = useAppStore((s) => s.setTicker);
+  const snapshots = useSnapshots(ticker);
 
-  // this page used to render regardless of how its two queries went, so a dead
+  // this page used to render regardless of how its queries went, so a dead
   // server showed a name of "-" and a symbol section that was simply empty -
   // indistinguishable from having no symbols. every other page guards this.
   if (symbols.isError || session.isError) {
@@ -32,38 +61,36 @@ export const SettingsPage: FC = () => {
   }
 
   const user = session.data?.user;
+  const stored = snapshots.data ?? [];
+  const latest = stored[0];
+  const contracts = stored.reduce((total, snapshot) => total + snapshot.contractCount, 0);
 
   return (
     <PageShell>
-      <h1 className="text-lg tracking-tight">Settings</h1>
+      <div className="mb-2">
+        <h1 className="text-lg tracking-tight">Settings</h1>
+        <p className="mt-1 text-sm text-text-muted">Your account, and what the app opens on.</p>
+      </div>
 
-      <section className="mt-8 border-t border-border pt-6">
-        <h2 className="text-xs tracking-wide text-text-faint uppercase">Account</h2>
-        <dl className="mt-4 space-y-3">
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-sm text-text-muted">Name</dt>
-            <dd className="text-sm text-text">{user?.name ?? "-"}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-4">
-            <dt className="text-sm text-text-muted">Email</dt>
-            <dd className="num truncate text-sm text-text">{user?.email ?? "-"}</dd>
-          </div>
+      <Section title="Account" hint="The account these saved strategies belong to.">
+        <dl className="divide-y divide-border">
+          <Field label="Name">{user?.name ?? "-"}</Field>
+          <Field label="Email">
+            <span className="num truncate">{user?.email ?? "-"}</span>
+          </Field>
         </dl>
-      </section>
+      </Section>
 
-      <section className="mt-8 border-t border-border pt-6">
-        <h2 className="text-xs tracking-wide text-text-faint uppercase">Default symbol</h2>
-        <p className="mt-2 text-sm text-text-muted">
-          The symbol the app opens on. Changing it here also changes the active symbol.
-        </p>
-
+      <Section
+        title="Default symbol"
+        hint="The symbol the app opens on. Changing it here also changes the symbol you are looking at now."
+      >
         {symbols.data.length === 0 ? (
-          <EmptyState
-            title="No symbols yet"
-            hint="Ingest a chain and the symbols it covers will be selectable here."
-          />
+          <p className="text-sm text-text-muted">
+            No symbols yet. Ingest a chain and it will be selectable here.
+          </p>
         ) : (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {symbols.data.map((symbol) => {
               const active = symbol.ticker === ticker;
               return (
@@ -72,10 +99,10 @@ export const SettingsPage: FC = () => {
                   type="button"
                   onClick={() => setTicker(symbol.ticker)}
                   aria-pressed={active}
-                  className={`num flex cursor-pointer items-center gap-2 rounded-sm border px-3 py-1.5 text-sm transition-colors active:translate-y-px ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-sm border px-3 py-2 text-left transition-colors active:translate-y-px ${
                     active
-                      ? "border-accent-dim bg-accent-glow text-accent"
-                      : "border-border text-text-muted hover:border-border-strong hover:text-text"
+                      ? "border-accent-dim bg-accent-glow"
+                      : "border-border hover:border-border-strong"
                   }`}
                 >
                   {/* selection was carried by colour alone before */}
@@ -83,15 +110,49 @@ export const SettingsPage: FC = () => {
                     size={14}
                     strokeWidth={2}
                     aria-hidden="true"
-                    className={active ? "opacity-100" : "opacity-0"}
+                    className={`shrink-0 ${active ? "text-accent opacity-100" : "opacity-0"}`}
                   />
-                  {symbol.ticker}
+                  <span className="min-w-0">
+                    <span
+                      className={`num block text-sm ${active ? "text-accent" : "text-text-muted"}`}
+                    >
+                      {symbol.ticker}
+                    </span>
+                    <span className="block truncate text-xs text-text-faint">{symbol.name}</span>
+                  </span>
                 </button>
               );
             })}
           </div>
         )}
-      </section>
+      </Section>
+
+      <Section
+        title="Stored data"
+        hint="Chains are stored as dated snapshots. Every price and greek in the app is read from one of these, never from a live quote."
+      >
+        {snapshots.isPending ? (
+          <p className="text-sm text-text-muted">Loading snapshots</p>
+        ) : stored.length === 0 ? (
+          <p className="text-sm text-text-muted">
+            Nothing stored for {ticker ?? "this symbol"} yet.
+          </p>
+        ) : (
+          <dl className="divide-y divide-border">
+            <Field label="Snapshots">
+              <span className="num">{stored.length}</span>
+            </Field>
+            <Field label="Contracts">
+              <span className="num">{contracts.toLocaleString("en-US")}</span>
+            </Field>
+            {latest !== undefined && (
+              <Field label="Most recent">
+                <span className="num">{longDate(latest.tradeDate)}</span>
+              </Field>
+            )}
+          </dl>
+        )}
+      </Section>
     </PageShell>
   );
 };
