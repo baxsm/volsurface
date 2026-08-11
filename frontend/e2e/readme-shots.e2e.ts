@@ -128,6 +128,14 @@ test("chain and contract detail", async ({ page }) => {
   await expect(page.getByRole("complementary", { name: "Contract detail" })).toBeVisible();
   await settle(page);
   await alignRows(page);
+
+  // the panel scrolls with the table it sits over, so aligning the rows drags
+  // its header out of frame. it is the contract's identity, so it has to be in
+  // the picture.
+  await page.evaluate(() => {
+    document.querySelector("aside[aria-label='Contract detail']")?.scrollTo(0, 0);
+  });
+  await settle(page, 250);
   await page.screenshot({ path: `${DIR}/contract-panel.png`, scale: "device" });
 });
 
