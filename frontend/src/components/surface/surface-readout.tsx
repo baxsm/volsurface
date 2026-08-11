@@ -1,6 +1,9 @@
+import { Check, TriangleAlert } from "lucide-react";
+import { useReducedMotion } from "motion/react";
 import type { FC } from "react";
 import { decimal, integer, percent, shortDate } from "@/lib/format";
 import type { SviSlice } from "@/lib/types";
+import { useCountUp } from "@/lib/use-count-up";
 
 interface StatusPillProps {
   ok: boolean;
@@ -10,11 +13,17 @@ interface StatusPillProps {
 
 export const StatusPill: FC<StatusPillProps> = ({ ok, okLabel, badLabel }) => (
   <span
-    className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${
+    className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors duration-200 ${
       ok ? "border-pos/30 bg-pos/10 text-pos" : "border-warn/30 bg-warn/10 text-warn"
     }`}
   >
-    <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-pos" : "bg-warn"}`} />
+    {/* a mark as well as a hue, so pass and fail are not told apart by colour
+        alone */}
+    {ok ? (
+      <Check size={11} strokeWidth={2.5} aria-hidden="true" />
+    ) : (
+      <TriangleAlert size={11} strokeWidth={2} aria-hidden="true" />
+    )}
     {ok ? okLabel : badLabel}
   </span>
 );
@@ -43,6 +52,32 @@ const Row: FC<{ label: string; value: string; hint?: string }> = ({ label, value
     <span className="num text-sm text-text">{value}</span>
   </div>
 );
+
+/**
+ * the same row for a figure that changes as the slice plane sweeps. dragging
+ * the slider used to flicker every number here between fits while the mesh
+ * beside them morphed smoothly, so they tween now for the same reason the
+ * payoff metrics do.
+ */
+const NumberRow: FC<{
+  label: string;
+  value: number | null;
+  format: (value: number | null) => string;
+  hint?: string;
+}> = ({ label, value, format, hint }) => {
+  const reduced = useReducedMotion();
+  const shown = useCountUp(value ?? 0, reduced !== true && value !== null);
+
+  return (
+    <Row
+      label={label}
+      value={value === null ? format(null) : format(shown)}
+      // spread rather than hint={hint}: exactOptionalPropertyTypes refuses an
+      // explicit undefined for an optional prop
+      {...(hint === undefined ? {} : { hint })}
+    />
+  );
+};
 
 /**
  * the fitted parameters behind the slice under the plane. this is what makes
@@ -132,9 +167,18 @@ export const SurfaceReadout: FC<SurfaceReadoutProps> = ({
       </div>
 
       <div className="divide-y divide-border border-t border-border">
-        <Row label="ATM vol" value={percent(atmVol, 2)} />
-        <Row label="Fit error" hint="rmse, total variance" value={decimal(slice.rmse, 5)} />
-        <Row label="Quotes fitted" value={integer(slice.quoteCount)} />
+        <NumberRow label="ATM vol" value={atmVol} format={(v) => percent(v, 2)} />
+        <NumberRow
+          label="Fit error"
+          hint="rmse, total variance"
+          value={slice.rmse}
+          format={(v) => decimal(v, 5)}
+        />
+        <NumberRow
+          label="Quotes fitted"
+          value={slice.quoteCount}
+          format={(v) => integer(v === null ? null : Math.round(v))}
+        />
         <Row
           label="Quoted range"
           hint="log-moneyness"
@@ -142,13 +186,18 @@ export const SurfaceReadout: FC<SurfaceReadoutProps> = ({
         />
       </div>
 
-      <p className="mt-4 mb-1 text-xs tracking-wide text-text-faint uppercase">SVI parameters</p>
+      <h3 className="mt-4 mb-1 text-xs tracking-wide text-text-faint uppercase">SVI parameters</h3>
       <div className="divide-y divide-border border-t border-border">
-        <Row label="a" hint="level" value={decimal(params.a, 5)} />
-        <Row label="b" hint="wing slope" value={decimal(params.b, 5)} />
-        <Row label="rho" hint="skew" value={decimal(params.rho, 5)} />
-        <Row label="m" hint="vertex shift" value={decimal(params.m, 5)} />
-        <Row label="sigma" hint="roundness" value={decimal(params.sigma, 5)} />
+        <NumberRow label="a" hint="level" value={params.a} format={(v) => decimal(v, 5)} />
+        <NumberRow label="b" hint="wing slope" value={params.b} format={(v) => decimal(v, 5)} />
+        <NumberRow label="rho" hint="skew" value={params.rho} format={(v) => decimal(v, 5)} />
+        <NumberRow label="m" hint="vertex shift" value={params.m} format={(v) => decimal(v, 5)} />
+        <NumberRow
+          label="sigma"
+          hint="roundness"
+          value={params.sigma}
+          format={(v) => decimal(v, 5)}
+        />
       </div>
 
       {skippedExpirations.length > 0 && (

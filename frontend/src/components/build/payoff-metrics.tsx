@@ -1,53 +1,7 @@
 import { useReducedMotion } from "motion/react";
-import { type FC, useEffect, useRef, useState } from "react";
+import type { FC } from "react";
 import type { PayoffResult } from "@/lib/strategy";
-
-/** tweens a number toward its target. the readouts are the position's summary,
-    so they move with the curve instead of jumping while it springs. */
-const useCountUp = (value: number, enabled: boolean): number => {
-  const [shown, setShown] = useState(value);
-  const fromRef = useRef(value);
-  const frameRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!enabled) {
-      fromRef.current = value;
-      setShown(value);
-      return;
-    }
-
-    const from = fromRef.current;
-    if (from === value) return;
-
-    const duration = 320;
-    const start = performance.now();
-
-    const step = (now: number) => {
-      const t = Math.min((now - start) / duration, 1);
-      // ease-out: fast enough to feel responsive, settles rather than stopping
-      const eased = 1 - (1 - t) ** 3;
-      const next = from + (value - from) * eased;
-      fromRef.current = next;
-      setShown(next);
-
-      if (t < 1) {
-        frameRef.current = requestAnimationFrame(step);
-        return;
-      }
-      fromRef.current = value;
-      setShown(value);
-      frameRef.current = null;
-    };
-
-    frameRef.current = requestAnimationFrame(step);
-    return () => {
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
-    };
-  }, [value, enabled]);
-
-  return shown;
-};
+import { useCountUp } from "@/lib/use-count-up";
 
 interface ReadoutProps {
   label: string;

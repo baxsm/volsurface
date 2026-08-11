@@ -1,18 +1,49 @@
+import { X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type FC, useEffect } from "react";
 import { decimal, integer, longDate, money, percent } from "@/lib/format";
 import type { Contract, SnapshotMeta } from "@/lib/types";
+import { useCountUp } from "@/lib/use-count-up";
 
-const Metric: FC<{ label: string; value: string; tone?: string; hint?: string }> = ({
+/**
+ * one figure in the panel.
+ *
+ * `value` is the raw number and `format` renders it, rather than the caller
+ * passing a finished string, because the number is tweened: clicking down the
+ * strike ladder used to replace all sixteen readouts in a single frame while
+ * the panel itself spring-animated, so the panel moved and its contents did
+ * not. null is passed straight through - there is nothing to count toward.
+ */
+const Metric: FC<{
+  label: string;
+  value: number | null;
+  format: (value: number | null) => string;
+  tone?: string;
+  hint?: string;
+}> = ({ label, value, format, tone = "text-text", hint }) => {
+  const reduced = useReducedMotion();
+  const shown = useCountUp(value ?? 0, reduced !== true && value !== null);
+
+  return (
+    <div>
+      <dt className="text-xs text-text-faint">{label}</dt>
+      <dd className={`num mt-1 text-sm ${tone}`}>
+        {value === null ? format(null) : format(shown)}
+      </dd>
+      {hint !== undefined && <p className="mt-0.5 text-xs text-text-faint">{hint}</p>}
+    </div>
+  );
+};
+
+/** the same row for a value that is a word rather than a number */
+const TextMetric: FC<{ label: string; value: string; tone?: string }> = ({
   label,
   value,
   tone = "text-text",
-  hint,
 }) => (
   <div>
     <dt className="text-xs text-text-faint">{label}</dt>
-    <dd className={`num mt-1 text-sm ${tone}`}>{value}</dd>
-    {hint !== undefined && <p className="mt-0.5 text-xs text-text-faint">{hint}</p>}
+    <dd className={`num mt-1 text-sm transition-colors duration-200 ${tone}`}>{value}</dd>
   </div>
 );
 
@@ -57,44 +88,41 @@ export const ContractPanel: FC<ContractPanelProps> = ({
           className="scrollbar-thin absolute inset-y-0 right-0 z-30 w-full overflow-y-auto border-l border-border bg-surface sm:w-80"
         >
           <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
-            <div className="min-w-0">
+            {/* the identity of the contract is the one thing that cannot tween,
+                so it cross-fades on the id instead */}
+            <motion.div
+              key={contract.contractId}
+              initial={reduced === true ? false : { opacity: 0, y: -3 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: reduced === true ? 0 : 0.18 }}
+              className="min-w-0"
+            >
               <p className="num truncate text-sm text-text">{contract.contractId}</p>
               <p className="mt-1 text-xs text-text-muted">
                 {snapshot.ticker} {contract.type} at {money(contract.strike)}
                 {expiration !== null && ` - ${longDate(expiration)}`}
               </p>
-            </div>
+            </motion.div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close contract detail"
               className="-m-1.5 shrink-0 cursor-pointer rounded-sm p-3 text-text-muted transition-colors hover:bg-surface-2 hover:text-text active:translate-y-px"
             >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                aria-hidden="true"
-              >
-                <path d="M4 4l8 8M12 4l-8 8" />
-              </svg>
+              <X size={16} strokeWidth={1.4} aria-hidden="true" />
             </button>
           </div>
 
           <section className="border-b border-border px-5 py-4">
             <h3 className="mb-3 text-xs tracking-wide text-text-faint uppercase">Market</h3>
             <dl className="grid grid-cols-2 gap-4">
-              <Metric label="Bid" value={money(contract.bid)} />
-              <Metric label="Ask" value={money(contract.ask)} />
-              <Metric label="Mark" value={money(contract.mark)} />
-              <Metric label="Spread" value={money(spread)} />
-              <Metric label="Last" value={money(contract.last)} />
-              <Metric label="Volume" value={integer(contract.volume)} />
-              <Metric label="Open interest" value={integer(contract.openInterest)} />
+              <Metric label="Bid" value={contract.bid} format={money} />
+              <Metric label="Ask" value={contract.ask} format={money} />
+              <Metric label="Mark" value={contract.mark} format={money} />
+              <Metric label="Spread" value={spread} format={money} />
+              <Metric label="Last" value={contract.last} format={money} />
+              <Metric label="Volume" value={contract.volume} format={integer} />
+              <Metric label="Open interest" value={contract.openInterest} format={integer} />
             </dl>
           </section>
 
@@ -112,17 +140,14 @@ export const ContractPanel: FC<ContractPanelProps> = ({
                 {/* ours vs vendor is provenance, not selection, so neither side
                     takes the accent. the solver row below is the only value here
                     with a semantic tone. */}
-                <Metric label="Ours" value={percent(contract.computedIv, 2)} />
-                <Metric label="Vendor" value={percent(contract.vendorIv, 2)} />
+                <Metric label="Ours" value={contract.computedIv} format={(v) => percent(v, 2)} />
+                <Metric label="Vendor" value={contract.vendorIv} format={(v) => percent(v, 2)} />
                 <Metric
                   label="Difference"
-                  value={
-                    contract.vendorIv == null
-                      ? "-"
-                      : percent(contract.computedIv - contract.vendorIv, 2)
-                  }
+                  value={contract.vendorIv == null ? null : contract.computedIv - contract.vendorIv}
+                  format={(v) => (v === null ? "-" : percent(v, 2))}
                 />
-                <Metric
+                <TextMetric
                   label="Solver"
                   value={contract.ivConverged === true ? "converged" : "did not converge"}
                   tone={contract.ivConverged === true ? "text-pos" : "text-warn"}
@@ -134,15 +159,26 @@ export const ContractPanel: FC<ContractPanelProps> = ({
           <section className="px-5 py-4">
             <h3 className="mb-3 text-xs tracking-wide text-text-faint uppercase">Greeks</h3>
             <dl className="grid grid-cols-2 gap-4">
-              <Metric label="Delta" value={decimal(contract.greeks.delta, 4)} />
-              <Metric label="Gamma" value={decimal(contract.greeks.gamma, 5)} />
+              <Metric label="Delta" value={contract.greeks.delta} format={(v) => decimal(v, 4)} />
+              <Metric label="Gamma" value={contract.greeks.gamma} format={(v) => decimal(v, 5)} />
               <Metric
                 label="Vega"
-                value={decimal(contract.greeks.vega, 4)}
+                value={contract.greeks.vega}
+                format={(v) => decimal(v, 4)}
                 hint="per 1.00 of vol"
               />
-              <Metric label="Theta" value={decimal(contract.greeks.theta, 4)} hint="per year" />
-              <Metric label="Rho" value={decimal(contract.greeks.rho, 4)} hint="per 1.00 of rate" />
+              <Metric
+                label="Theta"
+                value={contract.greeks.theta}
+                format={(v) => decimal(v, 4)}
+                hint="per year"
+              />
+              <Metric
+                label="Rho"
+                value={contract.greeks.rho}
+                format={(v) => decimal(v, 4)}
+                hint="per 1.00 of rate"
+              />
             </dl>
             <p className="mt-4 text-xs leading-relaxed text-text-faint">
               Priced at {percent(snapshot.rate, 2)} rate and {percent(snapshot.dividendYield, 2)}{" "}

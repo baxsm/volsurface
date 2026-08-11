@@ -95,20 +95,25 @@ const SideCells: FC<SideCellsProps> = ({
   // the same label repeated across all seven columns
   const select = () => onSelect(contract);
 
+  // the selected side is tinted across all of its cells. the prop used to reach
+  // aria-pressed and nothing else, so the row a user had just opened carried no
+  // visual mark at all.
+  const selectedTint = selected ? "bg-accent-glow" : "";
+
   const cell = (tone: string) => ({
     onClick: select,
-    className: `${base} cursor-pointer ${tone}`,
+    className: `${base} cursor-pointer transition-colors ${selectedTint} ${tone}`,
   });
 
   return (
     <>
-      <td className={`num p-0 text-right ${shade}`}>
+      <td className={`num p-0 text-right transition-colors ${selectedTint} ${shade}`}>
         <button
           type="button"
           onClick={select}
           aria-label={label}
           aria-pressed={selected}
-          className="num block w-full cursor-pointer px-2 py-1.5 text-right text-text-muted"
+          className="num block w-full cursor-pointer px-2 py-1.5 text-right text-text-muted transition-colors hover:text-text"
         >
           {integer(contract.volume)}
         </button>
@@ -235,11 +240,15 @@ export const ChainTable: FC<ChainTableProps> = ({
           const isAtm = row.strike === atm;
           const strikeCell = (
             <td
+              // the tint on this row means "nearest the money", which read as an
+              // unexplained selection without somewhere to find that out
+              title={isAtm ? "Nearest the money" : undefined}
               className={`num px-3 py-1.5 text-center ${strikeFirst ? "sticky left-0 z-10" : ""} ${
                 isAtm ? "bg-atm font-medium text-accent" : "bg-surface-2 text-text"
               }`}
             >
               {money(row.strike)}
+              {isAtm && <span className="sr-only"> (nearest the money)</span>}
             </td>
           );
 
@@ -248,7 +257,11 @@ export const ChainTable: FC<ChainTableProps> = ({
               key={row.strike}
               ref={isAtm ? atmRef : undefined}
               data-atm={isAtm ? "true" : undefined}
-              className={`[&>td]:border-b [&>td]:border-border/50 ${isAtm ? "bg-accent-glow" : ""}`}
+              // the hover tracks the pointer across a dense numeric ladder,
+              // which had nothing following it before
+              className={`transition-colors [&>td]:border-b [&>td]:border-border/50 ${
+                isAtm ? "bg-accent-glow" : "hover:bg-surface-2/60"
+              }`}
             >
               {strikeFirst && strikeCell}
               {showCalls && (
