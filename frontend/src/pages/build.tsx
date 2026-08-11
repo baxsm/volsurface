@@ -1,6 +1,6 @@
 import { type FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { LegEditor } from "@/components/build/leg-editor";
+import { LegEditor, SELECT_CELL } from "@/components/build/leg-editor";
 import { PayoffChart } from "@/components/build/payoff-chart";
 import { PayoffMetrics } from "@/components/build/payoff-metrics";
 import { PresetPicker } from "@/components/build/preset-picker";
@@ -220,7 +220,7 @@ export const BuildPage: FC = () => {
               <select
                 value={expiration ?? ""}
                 onChange={(event) => setExpiration(event.target.value)}
-                className="num cursor-pointer rounded-sm border border-border bg-surface-2 px-2 py-1.5 text-sm text-text transition-colors hover:border-border-strong focus:border-accent-dim focus:outline-none"
+                className={`${SELECT_CELL} num w-auto`}
               >
                 {expirations.map((value) => (
                   <option key={value} value={value}>

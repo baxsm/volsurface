@@ -211,14 +211,21 @@ export const SlicePlane: FC<SlicePlaneProps> = ({ grid, bounds, axis, index }) =
   );
 };
 
-/** soft studio lighting: one key, one cool rim, and enough ambient that the
-    troughs stay readable instead of going black */
+/**
+ * soft studio lighting: one key, one cool rim, and enough ambient that the
+ * troughs stay readable instead of going black.
+ *
+ * kept deliberately dim. the mesh carries the vol ramp in its vertex colours,
+ * and a bright white key washes those toward the pale end of the ramp until a
+ * teal midsection renders near white - the lighting has to shape the surface
+ * without repainting it.
+ */
 export const StudioLights: FC = () => (
   <>
-    <ambientLight intensity={0.55} />
-    <directionalLight position={[3.5, 5, 2.5]} intensity={1.5} color="#ffffff" />
-    <directionalLight position={[-4, 2.5, -3]} intensity={0.65} color="#7fd6ff" />
-    <directionalLight position={[0, -3, 1]} intensity={0.18} color="#35e0c8" />
+    <ambientLight intensity={0.32} />
+    <directionalLight position={[3.5, 5, 2.5]} intensity={0.85} color="#ffffff" />
+    <directionalLight position={[-4, 2.5, -3]} intensity={0.45} color="#7fd6ff" />
+    <directionalLight position={[0, -3, 1]} intensity={0.14} color="#35e0c8" />
   </>
 );
 

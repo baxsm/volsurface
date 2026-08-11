@@ -5,6 +5,14 @@ import type { LegAction, LegType, StrategyLeg } from "@/lib/strategy";
 const CELL =
   "w-full rounded-sm border border-border bg-surface-2 px-2 py-1.5 text-sm text-text transition-colors hover:border-border-strong focus:border-accent-dim focus:outline-none";
 
+/**
+ * the native select keeps its semantics and keyboard behaviour, but the OS draws
+ * its own arrow in the platform's colours, which reads as a stray light control
+ * on a dark panel. appearance-none removes it and the chevron is drawn as an
+ * inline svg data uri in the faint token instead.
+ */
+export const SELECT_CELL = `${CELL} cursor-pointer appearance-none bg-[length:12px] bg-[right_0.5rem_center] bg-no-repeat pr-7 [background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%20fill='none'%20stroke='%235B616B'%20stroke-width='1.5'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M4%206l4%204%204-4'/%3E%3C/svg%3E")]`;
+
 interface LegRowProps {
   leg: StrategyLeg;
   index: number;
@@ -22,42 +30,43 @@ const numberOr = (raw: string, fallback: number): number => {
   return Number.isFinite(value) ? value : fallback;
 };
 
+/**
+ * each control names itself with aria-label rather than a visually hidden
+ * <label>. tailwind's sr-only hides with clip-path, which still counts toward
+ * the scroll width of an ancestor - inside this horizontally scrolled table the
+ * six hidden labels sat at the table's scrolled x and dragged the whole document
+ * 80px wider than a 375px viewport. the accessible name is identical either way.
+ */
 const LegRow: FC<LegRowProps> = ({ leg, index, expirations, canRemove, onChange, onRemove }) => (
   <tr className="border-t border-border">
     <td className="py-2 pr-2">
-      <label className="sr-only" htmlFor={`action-${leg.id}`}>
-        Leg {index + 1} action
-      </label>
       <select
         id={`action-${leg.id}`}
+        aria-label={`Leg ${index + 1} action`}
         value={leg.action}
         onChange={(event) => onChange(leg.id, { action: event.target.value as LegAction })}
-        className={`${CELL} cursor-pointer ${leg.action === "buy" ? "text-pos" : "text-neg"}`}
+        className={`${SELECT_CELL} ${leg.action === "buy" ? "text-pos" : "text-neg"}`}
       >
         <option value="buy">Buy</option>
         <option value="sell">Sell</option>
       </select>
     </td>
     <td className="py-2 pr-2">
-      <label className="sr-only" htmlFor={`type-${leg.id}`}>
-        Leg {index + 1} type
-      </label>
       <select
         id={`type-${leg.id}`}
+        aria-label={`Leg ${index + 1} type`}
         value={leg.type}
         onChange={(event) => onChange(leg.id, { type: event.target.value as LegType })}
-        className={`${CELL} cursor-pointer`}
+        className={SELECT_CELL}
       >
         <option value="call">Call</option>
         <option value="put">Put</option>
       </select>
     </td>
     <td className="py-2 pr-2">
-      <label className="sr-only" htmlFor={`strike-${leg.id}`}>
-        Leg {index + 1} strike
-      </label>
       <input
         id={`strike-${leg.id}`}
+        aria-label={`Leg ${index + 1} strike`}
         type="number"
         inputMode="decimal"
         step="0.5"
@@ -68,14 +77,12 @@ const LegRow: FC<LegRowProps> = ({ leg, index, expirations, canRemove, onChange,
       />
     </td>
     <td className="py-2 pr-2">
-      <label className="sr-only" htmlFor={`expiry-${leg.id}`}>
-        Leg {index + 1} expiry
-      </label>
       <select
         id={`expiry-${leg.id}`}
+        aria-label={`Leg ${index + 1} expiry`}
         value={leg.expiration}
         onChange={(event) => onChange(leg.id, { expiration: event.target.value })}
-        className={`${CELL} num cursor-pointer`}
+        className={`${SELECT_CELL} num`}
       >
         {/* a leg loaded from a save can name an expiry this snapshot does not
             carry, and dropping it would silently move the position */}
@@ -90,11 +97,9 @@ const LegRow: FC<LegRowProps> = ({ leg, index, expirations, canRemove, onChange,
       </select>
     </td>
     <td className="py-2 pr-2">
-      <label className="sr-only" htmlFor={`qty-${leg.id}`}>
-        Leg {index + 1} quantity
-      </label>
       <input
         id={`qty-${leg.id}`}
+        aria-label={`Leg ${index + 1} quantity`}
         type="number"
         inputMode="numeric"
         step="1"
@@ -107,11 +112,9 @@ const LegRow: FC<LegRowProps> = ({ leg, index, expirations, canRemove, onChange,
       />
     </td>
     <td className="py-2 pr-2">
-      <label className="sr-only" htmlFor={`price-${leg.id}`}>
-        Leg {index + 1} price
-      </label>
       <input
         id={`price-${leg.id}`}
+        aria-label={`Leg ${index + 1} price`}
         type="number"
         inputMode="decimal"
         step="0.01"

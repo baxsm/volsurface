@@ -173,9 +173,11 @@ export const ChainTable: FC<ChainTableProps> = ({
   // sticky has to sit on each th, not on thead or tr: in table layout those two
   // are not reliable containing blocks, and the group row would scroll under
   // the column row instead of sticking above it. ROW_ONE_H is the measured
-  // height of the group row, which becomes the second row's offset.
-  const groupCell = `sticky top-0 z-20 ${GROUP_ROW_H} bg-surface-2 px-2 py-0 text-xs font-normal text-text-faint`;
-  const columnCell = `sticky ${ROW_ONE_H} z-20 bg-surface-2 px-2 py-1.5 text-right font-normal`;
+  // height of the group row, which becomes the second row's offset. the row
+  // rule is drawn by the cells too - under border-separate a border on the tr
+  // itself is not painted.
+  const groupCell = `sticky top-0 z-20 ${GROUP_ROW_H} border-b border-border bg-surface-2 px-2 py-0 text-xs font-normal text-text-faint`;
+  const columnCell = `sticky ${ROW_ONE_H} z-20 border-b border-border bg-surface-2 px-2 py-1.5 text-right font-normal`;
 
   const strikeHeader = (
     <th scope="col" className={`${groupCell} text-center ${strikeFirst ? "left-0 z-30" : ""}`}>
@@ -184,9 +186,12 @@ export const ChainTable: FC<ChainTableProps> = ({
   );
 
   return (
-    <table className="w-full border-collapse text-sm">
+    /* separate, not collapse: a sticky th cannot be offset under the collapsed
+       border model, so with border-collapse the header scrolls away instead of
+       pinning. spacing is zeroed, so the rows still read as hairlines. */
+    <table className="w-full border-separate border-spacing-0 text-sm">
       <thead>
-        <tr className="border-b border-border">
+        <tr>
           {strikeFirst && strikeHeader}
           {showCalls && (
             <th colSpan={span} className={`${groupCell} text-left`}>
@@ -200,7 +205,7 @@ export const ChainTable: FC<ChainTableProps> = ({
             </th>
           )}
         </tr>
-        <tr className="border-b border-border text-xs text-text-faint">
+        <tr className="text-xs text-text-faint">
           {strikeFirst && (
             <th scope="col" className={`${columnCell} left-0 z-30`}>
               <span className="sr-only">Strike</span>
@@ -243,7 +248,7 @@ export const ChainTable: FC<ChainTableProps> = ({
               key={row.strike}
               ref={isAtm ? atmRef : undefined}
               data-atm={isAtm ? "true" : undefined}
-              className={`border-b border-border/50 ${isAtm ? "bg-accent-glow" : ""}`}
+              className={`[&>td]:border-b [&>td]:border-border/50 ${isAtm ? "bg-accent-glow" : ""}`}
             >
               {strikeFirst && strikeCell}
               {showCalls && (

@@ -3,7 +3,8 @@ import {
   buildSurfaceMesh,
   canMorph,
   colOffset,
-  ivFraction,
+  ivAtHeight,
+  ivColorPosition,
   ivHeight,
   morphPositions,
   RAMP,
@@ -118,64 +119,107 @@ describe("rampColor", () => {
   });
 });
 
-describe("ivFraction", () => {
-  const bounds = {
-    minIv: 0.4,
-    maxIv: 0.8,
-    minMoneyness: -1,
-    maxMoneyness: 1,
-    minYears: 0,
-    maxYears: 1,
-  };
-
-  it("maps the range onto 0..1", () => {
-    expect(ivFraction(0.4, bounds)).toBe(0);
-    expect(ivFraction(0.8, bounds)).toBe(1);
-    expect(ivFraction(0.6, bounds)).toBeCloseTo(0.5, 12);
-  });
-
-  it("sits a flat surface mid height rather than dividing by zero", () => {
-    expect(ivFraction(0.5, { ...bounds, minIv: 0.5, maxIv: 0.5 })).toBe(0.5);
-  });
-});
-
 describe("ivHeight", () => {
-  const bounds = {
-    minIv: 0.4,
-    maxIv: 0.8,
-    minMoneyness: -1,
-    maxMoneyness: 1,
-    minYears: 0,
-    maxYears: 1,
+  const evenly = (values: number[]) => {
+    const sortedIv = [...values].sort((a, b) => a - b);
+    return {
+      minIv: sortedIv[0] as number,
+      maxIv: sortedIv[sortedIv.length - 1] as number,
+      sortedIv,
+      minMoneyness: -1,
+      maxMoneyness: 1,
+      minYears: 0,
+      maxYears: 1,
+    };
   };
 
   it("keeps the ends pinned so nothing is clipped away", () => {
+    const bounds = evenly([0.4, 0.5, 0.6, 0.7, 0.8]);
     expect(ivHeight(0.4, bounds)).toBe(0);
     expect(ivHeight(0.8, bounds)).toBe(1);
   });
 
-  it("stays monotonic, so it compresses the axis without reordering it", () => {
+  it("stays monotonic, so it repositions the axis without reordering it", () => {
+    const real = surfaceBounds(realGrid);
+    if (real === null) throw new Error("no bounds");
+
     let previous = -1;
-    for (let i = 0; i <= 60; i++) {
-      const iv = 0.4 + (0.4 * i) / 60;
-      const height = ivHeight(iv, bounds);
+    for (let i = 0; i <= 120; i++) {
+      const iv = real.minIv + ((real.maxIv - real.minIv) * i) / 120;
+      const height = ivHeight(iv, real);
       expect(height).toBeGreaterThanOrEqual(previous);
       previous = height;
     }
   });
 
-  it("lifts the crowded low band off the floor on the real fit", () => {
-    // the front expiry alone reaches 87% while the rest sit near 45-65%, so a
-    // linear axis buries the median at a tenth of the height
+  it("sits a flat surface mid height rather than dividing by zero", () => {
+    expect(ivHeight(0.5, evenly([0.5, 0.5, 0.5]))).toBe(0.5);
+  });
+
+  it("puts the median at mid height on the real fit", () => {
+    // the front expiry alone reaches 87% while the middle half of the grid sits
+    // inside 4 points of each other, so a linear axis buries the median at a
+    // tenth of the height and a square root only reaches a third
     const real = surfaceBounds(realGrid);
     if (real === null) throw new Error("no bounds");
 
-    const quoted = realGrid.iv.flat().filter((v): v is number => v !== null);
-    const sorted = [...quoted].sort((a, b) => a - b);
-    const median = sorted[Math.floor(sorted.length / 2)] as number;
+    const median = real.sortedIv[Math.floor(real.sortedIv.length / 2)] as number;
+    expect(ivHeight(median, real)).toBeGreaterThan(0.45);
+    expect(ivHeight(median, real)).toBeLessThan(0.55);
+  });
 
-    expect(ivFraction(median, real)).toBeLessThan(0.15);
-    expect(ivHeight(median, real)).toBeGreaterThan(0.28);
+  it("gives the middle half of the data most of the ramp", () => {
+    const real = surfaceBounds(realGrid);
+    if (real === null) throw new Error("no bounds");
+
+    const at = (p: number) => real.sortedIv[Math.floor(real.sortedIv.length * p)] as number;
+    const band = ivHeight(at(0.75), real) - ivHeight(at(0.25), real);
+
+    // linearly this band is 0.10 and under a square root 0.16, which is what
+    // rendered the surface as one flat sheet
+    expect(band).toBeGreaterThan(0.4);
+  });
+
+  it("spreads colour across the ramp without washing out to the pale end", () => {
+    const real = surfaceBounds(realGrid);
+    if (real === null) throw new Error("no bounds");
+
+    const positions = real.sortedIv.map((iv) => ivColorPosition(iv, real));
+    const share = (test: (p: number) => boolean) =>
+      positions.filter(test).length / positions.length;
+
+    // the ends still reach the ends of the ramp
+    expect(ivColorPosition(real.minIv, real)).toBeCloseTo(0, 6);
+    expect(ivColorPosition(real.maxIv, real)).toBeCloseTo(1, 6);
+
+    // the deep blue end stays in use, which pure ranking loses
+    expect(share((p) => p < 0.33)).toBeGreaterThan(0.2);
+    // and the pale peak stays a peak rather than most of the surface
+    expect(share((p) => p > 0.67)).toBeLessThan(0.2);
+  });
+
+  it("keeps colour monotonic in vol", () => {
+    const real = surfaceBounds(realGrid);
+    if (real === null) throw new Error("no bounds");
+
+    let previous = -1;
+    for (const iv of real.sortedIv) {
+      const position = ivColorPosition(iv, real);
+      expect(position).toBeGreaterThanOrEqual(previous);
+      previous = position;
+    }
+  });
+
+  it("labels a tick with a vol that is really at that height", () => {
+    const real = surfaceBounds(realGrid);
+    if (real === null) throw new Error("no bounds");
+
+    for (const at of [0.25, 0.5, 0.75]) {
+      const iv = ivAtHeight(at, real);
+      expect(iv).toBeGreaterThanOrEqual(real.minIv);
+      expect(iv).toBeLessThanOrEqual(real.maxIv);
+      expect(ivHeight(iv, real)).toBeCloseTo(at, 1);
+    }
   });
 });
 

@@ -15,6 +15,9 @@ export interface SurfaceBounds {
   maxYears: number;
   minIv: number;
   maxIv: number;
+  /** every fitted vol on the grid, ascending. height and colour read positions
+      out of this rather than out of the raw range - see ivHeight. */
+  sortedIv: readonly number[];
 }
 
 /** a degenerate axis would divide by zero when normalising */
@@ -24,17 +27,18 @@ export const surfaceBounds = (grid: SurfaceGrid): SurfaceBounds | null => {
   const { moneyness, years } = grid;
   if (moneyness.length < 2 || years.length < 2) return null;
 
-  let minIv = Number.POSITIVE_INFINITY;
-  let maxIv = Number.NEGATIVE_INFINITY;
+  const sortedIv: number[] = [];
   for (const row of grid.iv) {
     for (const value of row) {
       if (value === null || !Number.isFinite(value)) continue;
-      if (value < minIv) minIv = value;
-      if (value > maxIv) maxIv = value;
+      sortedIv.push(value);
     }
   }
+  sortedIv.sort((a, b) => a - b);
 
-  if (!Number.isFinite(minIv) || !Number.isFinite(maxIv)) return null;
+  if (sortedIv.length === 0) return null;
+  const minIv = sortedIv[0] as number;
+  const maxIv = sortedIv[sortedIv.length - 1] as number;
 
   const minMoneyness = Math.min(...moneyness);
   const maxMoneyness = Math.max(...moneyness);
@@ -46,33 +50,112 @@ export const surfaceBounds = (grid: SurfaceGrid): SurfaceBounds | null => {
 
   // a perfectly flat surface is legitimate, so an empty vol span collapses to a
   // flat sheet at mid height instead of failing
-  return { minMoneyness, maxMoneyness, minYears, maxYears, minIv, maxIv };
-};
-
-/** where a vol sits in the fitted range, 0 at the floor and 1 at the peak */
-export const ivFraction = (iv: number, bounds: SurfaceBounds): number => {
-  const span = bounds.maxIv - bounds.minIv;
-  if (span < MIN_SPAN) return 0.5;
-  const t = (iv - bounds.minIv) / span;
-  return t < 0 ? 0 : t > 1 ? 1 : t;
+  return { minMoneyness, maxMoneyness, minYears, maxYears, minIv, maxIv, sortedIv };
 };
 
 /**
- * height uses the square root of the linear fraction, colour does not.
+ * height and colour use the vol's position in the sorted fitted values, not its
+ * position in the raw range.
  *
- * a real chain is nearly flat except at the front: on the IBM fit the nearest
- * expiry reaches 87% vol while everything past a month sits inside 45-65%. read
- * linearly that one four-day slice takes the whole vertical range and flattens
- * the other seventeen expiries into a featureless sheet - the median vol lands
- * at 10% of the height. the square root lifts that median to 31% and roughly
- * doubles the band the middle half of the data occupies.
+ * a real chain is nearly flat except at the front. on the IBM fit the four-day
+ * expiry reaches 87% while the middle half of the whole grid sits inside
+ * 46.9-51.2% - a 4% band stretched across a 43% range. mapped linearly the
+ * median vol lands at 10% of the height; even under a square root it only
+ * reaches 31%, and 56% of the grid still falls in the bottom third of the ramp.
+ * both render as one pale sheet with every feature crushed into the far corner,
+ * which is what the surface actually looked like before this changed.
  *
- * this compresses the axis, it does not reorder or clip it: the map is
- * monotonic, nothing is clamped away, and the peak still sits at full height.
- * so every "this vol is higher than that one" the surface shows is still true.
+ * ranking puts the median at 50% and gives the middle half of the data half the
+ * range instead of a sixth. it stays strictly monotonic and clips nothing, so
+ * every "this vol is higher than that one" the surface shows is still true -
+ * what it gives up is linearity, so equal heights no longer mean equal vol
+ * steps. that is why the legend marks a vol read back out of the data rather
+ * than an evenly spaced scale.
  */
-export const ivHeight = (iv: number, bounds: SurfaceBounds): number =>
-  Math.sqrt(ivFraction(iv, bounds));
+export const ivHeight = (iv: number, bounds: SurfaceBounds): number => {
+  const values = bounds.sortedIv;
+  if (values.length < 2) return 0.5;
+  if (bounds.maxIv - bounds.minIv < MIN_SPAN) return 0.5;
+
+  // a run of equal vols sits at the centre of the band it occupies, so ties do
+  // not smear one vol across a stretch of the ramp
+  const rankOf = (value: number) => (lowerBound(values, value) + upperBound(values, value) - 1) / 2;
+
+  // then rescale onto the ranks the extremes actually landed on. with heavy
+  // ties those centres are well inside 0..1 - two distinct vols would sit at
+  // 0.15 and 0.75 - and the floor and peak have to reach the ends of the ramp.
+  const first = rankOf(bounds.minIv);
+  const last = rankOf(bounds.maxIv);
+  const span = last - first;
+  if (span < MIN_SPAN) return 0.5;
+
+  const t = (rankOf(iv) - first) / span;
+  return t < 0 ? 0 : t > 1 ? 1 : t;
+};
+
+/** first index whose value is >= target */
+const lowerBound = (values: readonly number[], target: number): number => {
+  let lo = 0;
+  let hi = values.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((values[mid] as number) < target) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+};
+
+/** first index whose value is > target */
+const upperBound = (values: readonly number[], target: number): number => {
+  let lo = 0;
+  let hi = values.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if ((values[mid] as number) <= target) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+};
+
+/**
+ * where a vol sits on the colour ramp, which is not where it sits in height.
+ *
+ * height is pure rank because the geometry needs the spread - that is what
+ * stopped the surface rendering as a flat sheet. colour cannot use rank alone:
+ * ranking forces a quarter of the vertices into each quarter of the ramp, so a
+ * chain whose vols are genuinely bunched still gets painted across the full
+ * range and the mesh washes out to the pale end. blending rank halfway back
+ * toward the true position keeps the deep blue on the low vols and still lifts
+ * the bunched middle off the floor of the ramp.
+ */
+export const ivColorPosition = (iv: number, bounds: SurfaceBounds): number => {
+  const span = bounds.maxIv - bounds.minIv;
+  if (span < MIN_SPAN) return 0.5;
+  const linear = (iv - bounds.minIv) / span;
+  const clamped = linear < 0 ? 0 : linear > 1 ? 1 : linear;
+  return 0.5 * ivHeight(iv, bounds) + 0.5 * Math.sqrt(clamped);
+};
+
+/**
+ * the vol sitting closest to a given height, so a legend tick can be labelled
+ * with a value that is really there. inverts ivHeight by scanning the fitted
+ * vols rather than by algebra, so the two can never drift apart.
+ */
+export const ivAtHeight = (height: number, bounds: SurfaceBounds): number => {
+  const values = bounds.sortedIv;
+  if (values.length === 0) return bounds.minIv;
+
+  let best = values[0] as number;
+  let bestGap = Number.POSITIVE_INFINITY;
+  for (const value of values) {
+    const gap = Math.abs(ivHeight(value, bounds) - height);
+    if (gap < bestGap) {
+      bestGap = gap;
+      best = value;
+    }
+  }
+  return best;
+};
 
 const norm = (value: number, min: number, max: number): number => {
   const span = max - min;
@@ -189,10 +272,6 @@ export const buildSurfaceMesh = (grid: SurfaceGrid): SurfaceMesh | null => {
 
       const iv = ivRow[col] ?? null;
       const present = iv !== null && Number.isFinite(iv);
-      // colour follows height rather than the raw fraction. mapped linearly,
-      // nine tenths of a real chain lands in the bottom sixth of the ramp and
-      // the whole surface renders as one flat blue - the ramp only earns its
-      // place if the data actually spreads across it.
       const height = present ? ivHeight(iv, bounds) : 0.5;
 
       const i = vertexIndex(row, col, cols);
@@ -200,7 +279,7 @@ export const buildSurfaceMesh = (grid: SurfaceGrid): SurfaceMesh | null => {
       positions[i * 3 + 1] = height * STAGE.height;
       positions[i * 3 + 2] = z;
 
-      const [r, g, b] = rampColor(height);
+      const [r, g, b] = rampColor(present ? ivColorPosition(iv, bounds) : 0.5);
       colors[i * 3] = r;
       colors[i * 3 + 1] = g;
       colors[i * 3 + 2] = b;

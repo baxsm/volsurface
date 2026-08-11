@@ -6,7 +6,7 @@ import { AppLayout } from "@/components/shell/app-layout";
 import { ApiError } from "@/lib/api";
 import { BuildPage } from "@/pages/build";
 import { ChainPage } from "@/pages/chain";
-import { NotBuiltYet } from "@/pages/placeholder";
+import { NotFound } from "@/pages/not-found";
 import { SettingsPage } from "@/pages/settings";
 import { SignInPage } from "@/pages/sign-in";
 import { SignUpPage } from "@/pages/sign-up";
@@ -70,7 +70,7 @@ export const App: FC = () => (
           />
           <Route
             path="*"
-            element={<NotBuiltYet title="Not found" detail="That page does not exist." />}
+            element={<NotFound title="Not found" detail="That page does not exist." />}
           />
         </Route>
       </Routes>

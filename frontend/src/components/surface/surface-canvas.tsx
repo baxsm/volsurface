@@ -1,7 +1,12 @@
 import { Canvas } from "@react-three/fiber";
 import { type FC, useMemo } from "react";
 import { decimal, percent } from "@/lib/format";
-import { type SurfaceBounds, surfaceBounds } from "@/lib/surface-geometry";
+import {
+  ivAtHeight,
+  ivColorPosition,
+  type SurfaceBounds,
+  surfaceBounds,
+} from "@/lib/surface-geometry";
 import type { SurfaceGrid } from "@/lib/types";
 import { SurfaceMeshView } from "./surface-mesh";
 import { Controls, SlicePlane, Stage, StudioLights } from "./surface-scene";
@@ -25,6 +30,8 @@ const AxisLegend: FC<{ grid: SurfaceGrid; bounds: SurfaceBounds }> = ({ grid, bo
     if (all.length === 0) return null;
     return { min: Math.min(...all), max: Math.max(...all) };
   }, [grid]);
+
+  const median = ivAtHeight(0.5, bounds);
 
   return (
     /* fades into the canvas rather than floating bare over the mesh: overlaid
@@ -53,7 +60,9 @@ const AxisLegend: FC<{ grid: SurfaceGrid; bounds: SurfaceBounds }> = ({ grid, bo
         </div>
       </dl>
 
-      <div className="flex items-center gap-2">
+      {/* mt-4 reserves the row the tick sits in. when the legend wraps onto two
+          lines the tick would otherwise land on the moneyness readout above it */}
+      <div className="mt-4 flex items-center gap-2">
         <span className="num text-xs text-text-faint">{percent(bounds.minIv, 0)}</span>
         <div className="relative">
           <div
@@ -63,13 +72,15 @@ const AxisLegend: FC<{ grid: SurfaceGrid; bounds: SurfaceBounds }> = ({ grid, bo
                 "linear-gradient(90deg, #12233a 0%, #2e8aa6 33%, #6fe9c8 67%, #f2e9a0 100%)",
             }}
           />
-          {/* the ramp is spaced by the same compression the surface uses, so the
-              midpoint tick sits where that vol actually falls on the gradient */}
+          {/* one tick, not a scale: the ramp is not linear in vol, so the median
+              is marked at the point of the gradient the mesh really paints it.
+              more ticks than this collide - on a real chain the middle half of
+              the vols sit within a few points of each other. */}
           <span
             className="num absolute -top-4.5 -translate-x-1/2 text-[0.625rem] leading-none text-text-faint"
-            style={{ left: "50%" }}
+            style={{ left: `${ivColorPosition(median, bounds) * 100}%` }}
           >
-            {percent(bounds.minIv + (bounds.maxIv - bounds.minIv) * 0.25, 0)}
+            {percent(median, 0)}
           </span>
         </div>
         <span className="num text-xs text-text-faint">{percent(bounds.maxIv, 0)}</span>

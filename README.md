@@ -61,7 +61,7 @@ bun run dev
 
 `bun run worker` runs the scheduled chain snapshots alongside it.
 
-Copy `.env.example` to `.env` and fill in the values. `BETTER_AUTH_SECRET` must be at least 32
+In `backend/.env`, `BETTER_AUTH_SECRET` must be at least 32
 characters. `MARKET_DATA_SOURCE` selects where chains come from: `fixture` reads the committed
 chain and needs no key, `alphavantage` calls the live API and needs `ALPHA_VANTAGE_API_KEY` on a
 plan that includes option chains. A market-data API key is read server-side only and is never sent
