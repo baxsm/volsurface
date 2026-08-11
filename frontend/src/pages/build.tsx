@@ -212,8 +212,9 @@ export const BuildPage: FC = () => {
             Legs are priced at the marks in this snapshot. Profit is per contract at expiry.
           </p>
         </div>
+        {/* the label wraps the select, so clicking the word opens it too */}
         {expirations.length > 0 && (
-          <label className="flex items-center gap-2 text-xs text-text-muted">
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-text-muted">
             Expiry
             <select
               value={expiration ?? ""}

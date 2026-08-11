@@ -24,7 +24,8 @@ interface FieldProps {
 
 const Field: FC<FieldProps> = ({ id, label, type, value, error, autoComplete, onChange }) => (
   <div>
-    <label htmlFor={id} className="mb-1.5 block text-sm text-text-muted">
+    {/* htmlFor means clicking this focuses the field, so it is a control */}
+    <label htmlFor={id} className="mb-1.5 block cursor-pointer text-sm text-text-muted">
       {label}
     </label>
     <input

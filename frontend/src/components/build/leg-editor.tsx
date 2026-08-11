@@ -6,8 +6,11 @@ import type { LegAction, LegType, StrategyLeg } from "@/lib/strategy";
 // the border recolour is the mouse-focus affordance, but the global
 // focus-visible ring is left alone: killing the outline outright took the only
 // keyboard indicator with it
+// no cursor is set here: a text input already shows a caret, and stating it
+// meant SELECT_CELL inherited cursor-text and beat its own cursor-pointer, so
+// every leg dropdown looked like a text field
 const CELL =
-  "w-full cursor-text rounded-sm border border-border bg-surface-2 px-2 py-1.5 text-sm text-text transition-colors hover:border-border-strong focus:border-accent-dim";
+  "w-full rounded-sm border border-border bg-surface-2 px-2 py-1.5 text-sm text-text transition-colors hover:border-border-strong focus:border-accent-dim";
 
 /**
  * the native select keeps its semantics and keyboard behaviour, but the OS draws
