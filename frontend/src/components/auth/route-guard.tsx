@@ -1,5 +1,6 @@
 import type { FC, ReactNode } from "react";
 import { Navigate, useLocation } from "react-router";
+import { PendingHold } from "@/components/ui/states";
 import { useSession } from "@/lib/queries";
 
 /** authed routes wait for the session answer before deciding, so a slow
@@ -9,11 +10,9 @@ export const RequireAuth: FC<{ children: ReactNode }> = ({ children }) => {
   const location = useLocation();
 
   if (session.isPending) {
-    return (
-      <div className="flex h-full items-center justify-center" role="status" aria-live="polite">
-        <span className="text-sm text-text-faint">Checking your session</span>
-      </div>
-    );
+    // a cached session answers in about 40ms, which is too fast to show
+    // anything without it reading as a flicker
+    return <PendingHold label="Checking your session" />;
   }
 
   if (session.data == null) {

@@ -4,8 +4,17 @@ import { describe, expect, it, vi } from "vitest";
 import { EmptyState, ErrorState, LoadingState } from "../states";
 
 describe("data view states", () => {
-  it("announces loading to assistive tech", () => {
-    render(<LoadingState label="Loading chain" />);
+  it("announces loading to assistive tech once the wait is real", async () => {
+    render(<LoadingState label="Loading chain" delayMs={20} />);
+
+    // nothing at first: a load that resolves in a few tens of milliseconds
+    // would otherwise flash a whole skeleton and tear it down again
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent("Loading chain");
+  });
+
+  it("shows immediately when the wait is known to be slow", () => {
+    render(<LoadingState label="Loading chain" delayMs={0} />);
     expect(screen.getByRole("status")).toHaveTextContent("Loading chain");
   });
 

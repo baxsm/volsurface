@@ -2,7 +2,7 @@ import { type FC, lazy, Suspense, useEffect, useMemo, useRef, useState } from "r
 import { DateScrubber } from "@/components/surface/date-scrubber";
 import { SmileChart, type SmilePoint } from "@/components/surface/smile-chart";
 import { SurfaceReadout } from "@/components/surface/surface-readout";
-import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
+import { EmptyState, ErrorState, LoadingState, PendingHold } from "@/components/ui/states";
 import { ApiError } from "@/lib/api";
 import { daysBetween, longDate, money, shortDate } from "@/lib/format";
 import { useSurface } from "@/lib/queries";
@@ -222,13 +222,9 @@ export const SurfacePage: FC = () => {
           </div>
         </div>
 
-        <Suspense
-          fallback={
-            <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-text-faint">Loading the surface renderer</p>
-            </div>
-          }
-        >
+        {/* no delay on this one: it is a megabyte of three.js arriving, which is
+            never instant, so holding the message back only leaves a blank */}
+        <Suspense fallback={<PendingHold label="Loading the surface renderer" delayMs={0} />}>
           <SurfaceCanvas
             grid={grid}
             previous={morphFrom}

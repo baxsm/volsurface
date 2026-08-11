@@ -1,5 +1,5 @@
 import { Inbox, LoaderCircle, RotateCw, TriangleAlert } from "lucide-react";
-import type { FC, ReactNode } from "react";
+import { type FC, type ReactNode, useEffect, useState } from "react";
 
 /** the in-button pending glyph. a changed word alone is easy to miss on a fast
     response, so the motion is what actually reads as "working". */
@@ -15,22 +15,76 @@ export const Spinner: FC<{ className?: string }> = ({ className = "" }) => (
 interface LoadingStateProps {
   label: string;
   rows?: number;
+  /** set to 0 for a load already known to be slow, so the skeleton is immediate */
+  delayMs?: number;
 }
 
-export const LoadingState: FC<LoadingStateProps> = ({ label, rows = 6 }) => (
-  <div className="p-8" role="status" aria-live="polite">
-    <p className="mb-6 text-sm text-text-faint">{label}</p>
-    <div className="space-y-2">
-      {Array.from({ length: rows }, (_, i) => `skeleton-${i}`).map((key, i) => (
-        <div
-          key={key}
-          className="h-8 animate-pulse rounded-sm bg-surface-2"
-          style={{ animationDelay: `${i * 60}ms`, opacity: 1 - i * 0.12 }}
-        />
-      ))}
+/**
+ * a load under about a tenth of a second reads as instant, so drawing a
+ * skeleton for it only makes the page flash. measured on this app, the saved
+ * strategies list resolved in 39ms and settings in 47ms - both were showing a
+ * full skeleton and tearing it down again before anyone could register it,
+ * which reads as jank rather than as loading.
+ *
+ * so nothing is drawn for the first beat. past it the request is genuinely slow
+ * and the skeleton earns its place. the aria-live region only mounts with the
+ * visible skeleton, which also stops a screen reader announcing a load that
+ * already finished.
+ */
+export const LoadingState: FC<LoadingStateProps> = ({ label, rows = 6, delayMs = 150 }) => {
+  const [show, setShow] = useState(delayMs === 0);
+
+  useEffect(() => {
+    if (delayMs === 0) return;
+    const timer = setTimeout(() => setShow(true), delayMs);
+    return () => clearTimeout(timer);
+  }, [delayMs]);
+
+  if (!show) return null;
+
+  return (
+    <div className="p-8" role="status" aria-live="polite">
+      <p className="mb-6 text-sm text-text-faint">{label}</p>
+      <div className="space-y-2">
+        {Array.from({ length: rows }, (_, i) => `skeleton-${i}`).map((key, i) => (
+          <div
+            key={key}
+            className="h-8 animate-pulse rounded-sm bg-surface-2"
+            style={{ animationDelay: `${i * 60}ms`, opacity: 1 - i * 0.12 }}
+          />
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+/**
+ * a centred spinner for a wait that has no shape to skeleton - a session check
+ * rather than a list. held back on the same beat as LoadingState, so the common
+ * case of an already-cached session renders nothing at all.
+ */
+export const PendingHold: FC<{ label: string; delayMs?: number }> = ({ label, delayMs = 150 }) => {
+  const [show, setShow] = useState(delayMs === 0);
+
+  useEffect(() => {
+    if (delayMs === 0) return;
+    const timer = setTimeout(() => setShow(true), delayMs);
+    return () => clearTimeout(timer);
+  }, [delayMs]);
+
+  if (!show) return null;
+
+  return (
+    <div
+      className="flex h-full items-center justify-center gap-2.5"
+      role="status"
+      aria-live="polite"
+    >
+      <Spinner className="text-text-faint" />
+      <span className="text-sm text-text-faint">{label}</span>
+    </div>
+  );
+};
 
 interface EmptyStateProps {
   title: string;
