@@ -1,17 +1,26 @@
+import { Plus, X } from "lucide-react";
 import type { FC } from "react";
 import { shortDate } from "@/lib/format";
 import type { LegAction, LegType, StrategyLeg } from "@/lib/strategy";
 
+// the border recolour is the mouse-focus affordance, but the global
+// focus-visible ring is left alone: killing the outline outright took the only
+// keyboard indicator with it
 const CELL =
-  "w-full rounded-sm border border-border bg-surface-2 px-2 py-1.5 text-sm text-text transition-colors hover:border-border-strong focus:border-accent-dim focus:outline-none";
+  "w-full cursor-text rounded-sm border border-border bg-surface-2 px-2 py-1.5 text-sm text-text transition-colors hover:border-border-strong focus:border-accent-dim";
 
 /**
  * the native select keeps its semantics and keyboard behaviour, but the OS draws
  * its own arrow in the platform's colours, which reads as a stray light control
- * on a dark panel. appearance-none removes it and the chevron is drawn as an
- * inline svg data uri in the faint token instead.
+ * on a dark panel. appearance-none removes it and a chevron is painted as a
+ * background image instead.
+ *
+ * this is the one place a mark cannot come from lucide: a background-image needs
+ * a url, not a react component. the stroke reads from --color-text-faint at
+ * runtime rather than being a copy of its hex, so it cannot drift from the
+ * token. the shape is defined once in styles.css as --select-chevron.
  */
-export const SELECT_CELL = `${CELL} cursor-pointer appearance-none bg-[length:12px] bg-[right_0.5rem_center] bg-no-repeat pr-7 [background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%20fill='none'%20stroke='%235B616B'%20stroke-width='1.5'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M4%206l4%204%204-4'/%3E%3C/svg%3E")]`;
+export const SELECT_CELL = `${CELL} cursor-pointer appearance-none bg-[length:12px] bg-[right_0.5rem_center] bg-no-repeat pr-7 bg-(image:--select-chevron)`;
 
 interface LegRowProps {
   leg: StrategyLeg;
@@ -134,18 +143,7 @@ const LegRow: FC<LegRowProps> = ({ leg, index, expirations, canRemove, onChange,
         aria-label={`Remove leg ${index + 1}`}
         className="cursor-pointer rounded-sm p-1.5 text-text-muted transition-colors hover:bg-surface-2 hover:text-neg active:translate-y-px disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-text-muted disabled:active:translate-y-0"
       >
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          aria-hidden="true"
-        >
-          <path d="M4 4l8 8M12 4l-8 8" />
-        </svg>
+        <X size={14} strokeWidth={1.4} aria-hidden="true" />
       </button>
     </td>
   </tr>
@@ -205,8 +203,9 @@ export const LegEditor: FC<LegEditorProps> = ({
       type="button"
       onClick={onAdd}
       disabled={legs.length >= maxLegs}
-      className="mt-3 cursor-pointer rounded-sm border border-border-strong px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-strong disabled:hover:text-text-muted disabled:active:translate-y-0"
+      className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-sm border border-border-strong px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-strong disabled:hover:text-text-muted disabled:active:translate-y-0"
     >
+      <Plus size={13} strokeWidth={1.5} aria-hidden="true" />
       Add leg
     </button>
     {legs.length >= maxLegs && (

@@ -46,6 +46,15 @@
     color-scheme: dark;
   }
 
+  /* the select chevron, the one mark that cannot come from lucide: a
+     background-image needs a url, not a react component, and a data uri cannot
+     read a css variable. the stroke is therefore a copy of --color-text-faint
+     (#5b616b) and the two have to be changed together. it lives here next to the
+     token rather than inline in a class string, so that pairing is visible. */
+  :root {
+    --select-chevron: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235B616B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  }
+
   body {
     background-color: var(--color-bg);
     color: var(--color-text);

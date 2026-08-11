@@ -1,15 +1,9 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type FC, useEffect } from "react";
 import { NavLink } from "react-router";
-import { Glyph } from "./rail";
-
-const LINKS = [
-  { to: "/", label: "Surface", key: "surface" },
-  { to: "/chain", label: "Chain", key: "chain" },
-  { to: "/build", label: "Build", key: "build" },
-  { to: "/strategies", label: "Strategies", key: "strategies" },
-  { to: "/settings", label: "Settings", key: "settings" },
-] as const;
+import { Logo } from "./logo";
+// the same five routes the desktop rail lists, so the two navs cannot drift
+import { LINKS } from "./rail";
 
 interface MobileNavProps {
   open: boolean;
@@ -56,36 +50,26 @@ export const MobileNav: FC<MobileNavProps> = ({ open, onClose }) => {
             className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-surface"
           >
             <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
-              <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-                <title>volsurface</title>
-                <path
-                  d="M2 12.5 6 7.5l3.2 2.8L16 3.5"
-                  fill="none"
-                  stroke="var(--color-accent)"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <Logo />
               <span className="text-sm font-medium tracking-tight">volsurface</span>
             </div>
             <ul className="flex flex-col gap-0.5 p-2">
-              {LINKS.map((link) => (
-                <li key={link.to}>
+              {LINKS.map(({ to, label, Icon }) => (
+                <li key={to}>
                   <NavLink
-                    to={link.to}
-                    end={link.to === "/"}
+                    to={to}
+                    end={to === "/"}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-colors active:translate-y-px ${
+                      `flex cursor-pointer items-center gap-3 rounded-sm px-3 py-2.5 text-sm transition-colors active:translate-y-px ${
                         isActive
                           ? "bg-accent-glow text-accent"
                           : "text-text-muted hover:bg-surface-2 hover:text-text"
                       }`
                     }
                   >
-                    <Glyph name={link.key} className="shrink-0" />
-                    {link.label}
+                    <Icon size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+                    {label}
                   </NavLink>
                 </li>
               ))}

@@ -1,24 +1,15 @@
+import { Inbox, LoaderCircle, RotateCw, TriangleAlert } from "lucide-react";
 import type { FC, ReactNode } from "react";
 
 /** the in-button pending glyph. a changed word alone is easy to miss on a fast
     response, so the motion is what actually reads as "working". */
 export const Spinner: FC<{ className?: string }> = ({ className = "" }) => (
-  <svg
-    className={`animate-spin ${className}`}
-    width="14"
-    height="14"
-    viewBox="0 0 16 16"
-    fill="none"
+  <LoaderCircle
+    size={14}
+    strokeWidth={2}
     aria-hidden="true"
-  >
-    <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25" />
-    <path
-      d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-  </svg>
+    className={`shrink-0 animate-spin ${className}`}
+  />
 );
 
 interface LoadingStateProps {
@@ -49,7 +40,9 @@ interface EmptyStateProps {
 
 export const EmptyState: FC<EmptyStateProps> = ({ title, hint, action }) => (
   <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-    <div className="mb-4 h-px w-12 bg-border-strong" />
+    {/* empty and error used to differ only by the colour of a hairline, which
+        is not enough to tell "nothing here" from "something broke" */}
+    <Inbox size={20} strokeWidth={1.5} aria-hidden="true" className="mb-3 text-text-faint" />
     <h3 className="text-md text-text">{title}</h3>
     <p className="mt-2 max-w-sm text-sm text-text-muted">{hint}</p>
     {action !== undefined && <div className="mt-6">{action}</div>}
@@ -72,15 +65,16 @@ export const ErrorState: FC<ErrorStateProps> = ({
   retryLabel = "Try again",
 }) => (
   <div className="flex flex-col items-center justify-center px-6 py-20 text-center" role="alert">
-    <div className="mb-4 h-px w-12 bg-neg" />
+    <TriangleAlert size={20} strokeWidth={1.5} aria-hidden="true" className="mb-3 text-neg" />
     <h3 className="text-md text-text">{title}</h3>
     <p className="mt-2 max-w-sm text-sm text-text-muted">{message}</p>
     {onRetry !== undefined && (
       <button
         type="button"
         onClick={onRetry}
-        className="mt-6 cursor-pointer rounded-sm border border-border-strong px-4 py-2 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
+        className="mt-6 flex cursor-pointer items-center gap-2 rounded-sm border border-border-strong px-4 py-2 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
       >
+        <RotateCw size={14} strokeWidth={1.5} aria-hidden="true" />
         {retryLabel}
       </button>
     )}

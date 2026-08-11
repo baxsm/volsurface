@@ -1,7 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "motion/react";
+import { Check, ChevronDown, LogIn, LogOut, Menu } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type FC, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
+import { Spinner } from "@/components/ui/states";
 import { signOut } from "@/lib/auth";
 import { longDate, money, shortDate } from "@/lib/format";
 import { sessionKey, useSession } from "@/lib/queries";
@@ -17,6 +19,7 @@ const Dropdown: FC<{
 }> = ({ label, value, sub, disabled = false, children }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     if (!open) return;
@@ -48,29 +51,23 @@ const Dropdown: FC<{
         <span className="hidden text-xs text-text-faint lg:inline">{label}</span>
         <span className="num text-sm text-text">{value}</span>
         {sub !== undefined && <span className="text-xs text-text-muted">{sub}</span>}
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        <ChevronDown
+          size={12}
+          strokeWidth={1.5}
           aria-hidden="true"
           className={`text-text-faint transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          <path d="M4 6l4 4 4-4" />
-        </svg>
+        />
       </button>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -4 }}
+            // the global reduced-motion css cannot reach a js-driven translate,
+            // so the travel is dropped here the way the drawer and panel do it
+            initial={reduced === true ? { opacity: 0 } : { opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.14 }}
+            exit={reduced === true ? { opacity: 0 } : { opacity: 0, y: -4 }}
+            transition={{ duration: reduced === true ? 0 : 0.14 }}
             className="scrollbar-thin absolute left-0 z-50 mt-1.5 max-h-80 w-60 overflow-y-auto rounded-sm border border-border-strong bg-surface shadow-2xl shadow-black/50"
           >
             <ul>{children(() => setOpen(false))}</ul>
@@ -116,18 +113,7 @@ export const Topbar: FC<{ onOpenNav: () => void }> = ({ onOpenNav }) => {
         aria-label="Open navigation"
         className="-ml-1 cursor-pointer rounded-sm p-2 text-text-muted transition-colors hover:bg-surface-2 hover:text-text active:translate-y-px md:hidden"
       >
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-          aria-hidden="true"
-        >
-          <path d="M2 4h12M2 8h12M2 12h12" />
-        </svg>
+        <Menu size={18} strokeWidth={1.4} aria-hidden="true" />
       </button>
 
       <Dropdown
@@ -145,12 +131,22 @@ export const Topbar: FC<{ onOpenNav: () => void }> = ({ onOpenNav }) => {
                   setTicker(symbol.ticker);
                   close();
                 }}
-                className={`flex w-full cursor-pointer flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors hover:bg-surface-2 ${
+                className={`flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-2 ${
                   symbol.ticker === ticker ? "text-accent" : "text-text"
                 }`}
               >
-                <span className="num text-sm">{symbol.ticker}</span>
-                <span className="truncate text-xs text-text-muted">{symbol.name}</span>
+                {/* the tick carries the selection, so it does not rest on colour
+                    alone the way it used to */}
+                <Check
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                  className={`shrink-0 ${symbol.ticker === ticker ? "opacity-100" : "opacity-0"}`}
+                />
+                <span className="flex min-w-0 flex-col items-start gap-0.5">
+                  <span className="num text-sm">{symbol.ticker}</span>
+                  <span className="truncate text-xs text-text-muted">{symbol.name}</span>
+                </span>
               </button>
             </li>
           ))
@@ -172,11 +168,19 @@ export const Topbar: FC<{ onOpenNav: () => void }> = ({ onOpenNav }) => {
                   setSnapshotId(snapshot.id);
                   close();
                 }}
-                className={`flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-2 ${
+                className={`flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-surface-2 ${
                   snapshot.id === activeSnapshot?.id ? "text-accent" : "text-text"
                 }`}
               >
-                <span className="num text-sm">{longDate(snapshot.tradeDate)}</span>
+                <Check
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                  className={`shrink-0 ${
+                    snapshot.id === activeSnapshot?.id ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+                <span className="num flex-1 text-sm">{longDate(snapshot.tradeDate)}</span>
                 <span className="num text-xs text-text-faint">{snapshot.contractCount}</span>
               </button>
             </li>
@@ -194,12 +198,15 @@ export const Topbar: FC<{ onOpenNav: () => void }> = ({ onOpenNav }) => {
       <div className="flex-1" />
 
       {session.data == null ? (
-        <a
-          href="/sign-in"
-          className="rounded-sm border border-border-strong px-3 py-1.5 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
+        /* a Link, not an anchor: an href here reloaded the whole app to reach a
+           route the router already owns */
+        <Link
+          to="/sign-in"
+          className="flex shrink-0 cursor-pointer items-center gap-2 rounded-sm border border-border-strong px-3 py-1.5 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
         >
+          <LogIn size={14} strokeWidth={1.5} aria-hidden="true" />
           Sign in
-        </a>
+        </Link>
       ) : (
         <div className="flex min-w-0 items-center gap-3">
           {/* the email yields first: it can be any length, and letting it push
@@ -212,8 +219,10 @@ export const Topbar: FC<{ onOpenNav: () => void }> = ({ onOpenNav }) => {
             type="button"
             onClick={onSignOut}
             disabled={signingOut}
-            className="shrink-0 cursor-pointer rounded-sm border border-border px-3 py-1.5 text-sm whitespace-nowrap text-text-muted transition-colors hover:border-border-strong hover:text-text active:translate-y-px disabled:opacity-50 disabled:active:translate-y-0"
+            aria-busy={signingOut}
+            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-sm border border-border px-3 py-1.5 text-sm whitespace-nowrap text-text-muted transition-colors hover:border-border-strong hover:text-text active:translate-y-px disabled:opacity-50 disabled:active:translate-y-0"
           >
+            {signingOut ? <Spinner /> : <LogOut size={14} strokeWidth={1.5} aria-hidden="true" />}
             {signingOut ? "Signing out" : "Sign out"}
           </button>
         </div>

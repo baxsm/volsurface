@@ -5,6 +5,7 @@ import { PayoffChart } from "@/components/build/payoff-chart";
 import { PayoffMetrics } from "@/components/build/payoff-metrics";
 import { PresetPicker } from "@/components/build/preset-picker";
 import { SaveStrategyForm } from "@/components/build/save-strategy-form";
+import { PageShell } from "@/components/shell/page-shell";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/states";
 import { ApiError } from "@/lib/api";
 import { shortDate } from "@/lib/format";
@@ -201,101 +202,97 @@ export const BuildPage: FC = () => {
   const presetLabel = PRESETS.find((entry) => entry.id === preset)?.summary ?? null;
 
   return (
-    <div className="scrollbar-thin h-full overflow-x-hidden overflow-y-auto">
-      {/* min-w-0 so the legs table's own scroll container is what scrolls, rather
-          than the table widening the page and pushing the chart off a phone */}
-      <div className="mx-auto min-w-0 max-w-6xl px-4 py-6 md:px-8">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg tracking-tight">
-              {saved.data === undefined ? "Strategy builder" : saved.data.name}
-            </h2>
-            <p className="mt-1 text-sm text-text-muted">
-              Legs are priced at the marks in this snapshot. Profit is per contract at expiry.
-            </p>
-          </div>
-          {expirations.length > 0 && (
-            <label className="flex items-center gap-2 text-xs text-text-muted">
-              Expiry
-              <select
-                value={expiration ?? ""}
-                onChange={(event) => setExpiration(event.target.value)}
-                className={`${SELECT_CELL} num w-auto`}
-              >
-                {expirations.map((value) => (
-                  <option key={value} value={value}>
-                    {shortDate(value)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+    <PageShell>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg tracking-tight">
+            {saved.data === undefined ? "Strategy builder" : saved.data.name}
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Legs are priced at the marks in this snapshot. Profit is per contract at expiry.
+          </p>
         </div>
-
-        <section className="mt-6 border-t border-border pt-5">
-          <h3 className="text-xs tracking-wide text-text-faint uppercase">Preset</h3>
-          <div className="mt-3">
-            <PresetPicker
-              active={preset}
-              disabled={group === undefined || spot === null}
-              onPick={pickPreset}
-            />
-          </div>
-          <p className="mt-2 h-4 text-xs text-text-faint">{presetLabel}</p>
-        </section>
-
-        <section className="mt-6 border-t border-border pt-5">
-          <h3 className="text-xs tracking-wide text-text-faint uppercase">Legs</h3>
-          <div className="mt-3">
-            <LegEditor
-              legs={legs}
-              expirations={expirations}
-              maxLegs={MAX_LEGS}
-              onChange={changeLeg}
-              onRemove={removeLeg}
-              onAdd={addLeg}
-            />
-          </div>
-        </section>
-
-        <section className="mt-6 border-t border-border pt-5">
-          <h3 className="text-xs tracking-wide text-text-faint uppercase">Payoff at expiry</h3>
-
-          {payoffError !== null ? (
-            <div className="mt-3">
-              <ErrorState title="Could not price this position" message={payoffError} />
-            </div>
-          ) : payoff === null ? (
-            <div className="mt-3">
-              <LoadingState label="Pricing the position" rows={5} />
-            </div>
-          ) : (
-            <>
-              <div className="mt-3 h-[16rem] w-full min-w-0 sm:h-[20rem]">
-                <PayoffChart payoff={payoff} spot={spot} stale={stale} />
-              </div>
-              <div className="mt-5">
-                <PayoffMetrics payoff={payoff} />
-              </div>
-            </>
-          )}
-        </section>
-
-        <section className="mt-6 border-t border-border pt-5 pb-10">
-          <h3 className="text-xs tracking-wide text-text-faint uppercase">Save</h3>
-          <div className="mt-3">
-            <SaveStrategyForm
-              legs={legs}
-              ticker={ticker}
-              signedIn={session.data != null}
-              existing={
-                saved.data === undefined ? null : { id: saved.data.id, name: saved.data.name }
-              }
-              defaultKind={preset ?? "custom"}
-            />
-          </div>
-        </section>
+        {expirations.length > 0 && (
+          <label className="flex items-center gap-2 text-xs text-text-muted">
+            Expiry
+            <select
+              value={expiration ?? ""}
+              onChange={(event) => setExpiration(event.target.value)}
+              className={`${SELECT_CELL} num w-auto`}
+            >
+              {expirations.map((value) => (
+                <option key={value} value={value}>
+                  {shortDate(value)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
-    </div>
+
+      <section className="mt-6 border-t border-border pt-5">
+        <h3 className="text-xs tracking-wide text-text-faint uppercase">Preset</h3>
+        <div className="mt-3">
+          <PresetPicker
+            active={preset}
+            disabled={group === undefined || spot === null}
+            onPick={pickPreset}
+          />
+        </div>
+        <p className="mt-2 h-4 text-xs text-text-faint">{presetLabel}</p>
+      </section>
+
+      <section className="mt-6 border-t border-border pt-5">
+        <h3 className="text-xs tracking-wide text-text-faint uppercase">Legs</h3>
+        <div className="mt-3">
+          <LegEditor
+            legs={legs}
+            expirations={expirations}
+            maxLegs={MAX_LEGS}
+            onChange={changeLeg}
+            onRemove={removeLeg}
+            onAdd={addLeg}
+          />
+        </div>
+      </section>
+
+      <section className="mt-6 border-t border-border pt-5">
+        <h3 className="text-xs tracking-wide text-text-faint uppercase">Payoff at expiry</h3>
+
+        {payoffError !== null ? (
+          <div className="mt-3">
+            <ErrorState title="Could not price this position" message={payoffError} />
+          </div>
+        ) : payoff === null ? (
+          <div className="mt-3">
+            <LoadingState label="Pricing the position" rows={5} />
+          </div>
+        ) : (
+          <>
+            <div className="mt-3 h-[16rem] w-full min-w-0 sm:h-[20rem]">
+              <PayoffChart payoff={payoff} spot={spot} stale={stale} />
+            </div>
+            <div className="mt-5">
+              <PayoffMetrics payoff={payoff} />
+            </div>
+          </>
+        )}
+      </section>
+
+      <section className="mt-6 border-t border-border pt-5 pb-10">
+        <h3 className="text-xs tracking-wide text-text-faint uppercase">Save</h3>
+        <div className="mt-3">
+          <SaveStrategyForm
+            legs={legs}
+            ticker={ticker}
+            signedIn={session.data != null}
+            existing={
+              saved.data === undefined ? null : { id: saved.data.id, name: saved.data.name }
+            }
+            defaultKind={preset ?? "custom"}
+          />
+        </div>
+      </section>
+    </PageShell>
   );
 };

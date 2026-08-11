@@ -35,7 +35,7 @@ const Field: FC<FieldProps> = ({ id, label, type, value, error, autoComplete, on
       aria-invalid={error !== undefined}
       aria-describedby={error === undefined ? undefined : `${id}-error`}
       onChange={(event) => onChange(event.target.value)}
-      className={`w-full rounded-sm border bg-surface-2 px-3 py-2 text-sm text-text transition-colors placeholder:text-text-faint focus:outline-none ${
+      className={`w-full rounded-sm border bg-surface-2 px-3 py-2 text-sm text-text transition-colors placeholder:text-text-faint ${
         error === undefined
           ? "border-border focus:border-accent-dim"
           : "border-neg focus:border-neg"

@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { type FC, type FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Spinner } from "@/components/ui/states";
@@ -84,7 +85,7 @@ export const SaveStrategyForm: FC<SaveStrategyFormProps> = ({
             setName(event.target.value);
             setSaved(false);
           }}
-          className="w-full rounded-sm border border-border bg-surface-2 px-3 py-2 text-sm text-text transition-colors placeholder:text-text-faint hover:border-border-strong focus:border-accent-dim focus:outline-none"
+          className="w-full rounded-sm border border-border bg-surface-2 px-3 py-2 text-sm text-text transition-colors placeholder:text-text-faint hover:border-border-strong focus:border-accent-dim"
         />
       </div>
 
@@ -94,7 +95,7 @@ export const SaveStrategyForm: FC<SaveStrategyFormProps> = ({
         aria-busy={save.isPending}
         className="flex cursor-pointer items-center gap-2 rounded-sm bg-accent px-4 py-2 text-sm text-bg transition-colors hover:bg-accent/90 active:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-accent"
       >
-        {save.isPending && <Spinner />}
+        {save.isPending ? <Spinner /> : <Check size={14} strokeWidth={2} aria-hidden="true" />}
         {save.isPending ? "Saving" : existing === null ? "Save" : "Save changes"}
       </button>
 
@@ -106,7 +107,10 @@ export const SaveStrategyForm: FC<SaveStrategyFormProps> = ({
         ) : saved ? (
           <span className="text-pos">
             Saved.{" "}
-            <Link to="/strategies" className="underline">
+            <Link
+              to="/strategies"
+              className="cursor-pointer underline transition-colors hover:text-accent"
+            >
               See your strategies
             </Link>
           </span>

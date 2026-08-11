@@ -1,4 +1,5 @@
 import type { FC, ReactNode } from "react";
+import { Logo } from "@/components/shell/logo";
 
 /**
  * the left panel gives context about what the product is, per the ui rules -
@@ -9,17 +10,7 @@ export const AuthLayout: FC<{ children: ReactNode }> = ({ children }) => (
   <div className="grid min-h-dvh grid-cols-1 bg-bg lg:grid-cols-[1.1fr_1fr]">
     <div className="relative hidden flex-col overflow-hidden border-r border-border bg-surface p-12 lg:flex">
       <div className="flex items-center gap-2.5">
-        <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true">
-          <title>volsurface</title>
-          <path
-            d="M2 12.5 6 7.5l3.2 2.8L16 3.5"
-            fill="none"
-            stroke="var(--color-accent)"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <Logo size={20} />
         <span className="text-md font-medium tracking-tight">volsurface</span>
       </div>
 

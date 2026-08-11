@@ -1,5 +1,8 @@
+import { ArrowUpRight, Check, Plus, Trash2, TriangleAlert, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type FC, useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { PageShell } from "@/components/shell/page-shell";
 import { EmptyState, ErrorState, LoadingState, Spinner } from "@/components/ui/states";
 import { ApiError } from "@/lib/api";
 import { longDate } from "@/lib/format";
@@ -14,6 +17,7 @@ export const StrategiesPage: FC = () => {
   const remove = useDeleteStrategy();
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState<string | null>(null);
+  const reduced = useReducedMotion();
 
   if (strategies.isPending) return <LoadingState label="Loading your strategies" rows={5} />;
 
@@ -40,8 +44,9 @@ export const StrategiesPage: FC = () => {
         action={
           <Link
             to="/build"
-            className="rounded-sm border border-border-strong px-4 py-2 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
+            className="flex cursor-pointer items-center gap-2 rounded-sm border border-border-strong px-4 py-2 text-sm text-text transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
           >
+            <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
             Open the builder
           </Link>
         }
@@ -50,31 +55,41 @@ export const StrategiesPage: FC = () => {
   }
 
   return (
-    <div className="scrollbar-thin h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl px-4 py-6 md:px-6">
-        <h2 className="text-lg tracking-tight">Saved strategies</h2>
-        <p className="mt-1 text-sm text-text-muted">
-          Reopen a position in the builder, or remove it.
+    <PageShell>
+      <h1 className="text-lg tracking-tight">Saved strategies</h1>
+      <p className="mt-1 text-sm text-text-muted">
+        Reopen a position in the builder, or remove it.
+      </p>
+
+      {remove.isError && (
+        <p className="mt-4 flex items-center gap-2 text-sm text-neg" role="alert">
+          <TriangleAlert size={14} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+          {remove.error instanceof ApiError
+            ? remove.error.message
+            : "Could not delete that. Try again."}
         </p>
+      )}
 
-        {remove.isError && (
-          <p className="mt-4 text-sm text-neg" role="alert">
-            {remove.error instanceof ApiError
-              ? remove.error.message
-              : "Could not delete that. Try again."}
-          </p>
-        )}
-
-        <ul className="mt-6 border-t border-border">
+      <ul className="mt-6 border-t border-border">
+        <AnimatePresence initial={false}>
           {strategies.data.map((strategy) => (
-            <li
+            <motion.li
               key={strategy.id}
-              className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-4"
+              layout={reduced === true ? false : "position"}
+              exit={
+                reduced === true
+                  ? { opacity: 0 }
+                  : { opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }
+              }
+              transition={{ duration: reduced === true ? 0 : 0.2 }}
+              className="flex flex-wrap items-center justify-between gap-3 overflow-hidden border-b border-border py-4"
             >
               <div className="min-w-0">
+                {/* underlined so the primary target on the page does not read as
+                    plain text until the pointer happens to cross it */}
                 <Link
                   to={`/build?strategy=${strategy.id}`}
-                  className="text-sm text-text transition-colors hover:text-accent"
+                  className="cursor-pointer text-sm text-text underline decoration-border-strong underline-offset-4 transition-colors hover:text-accent hover:decoration-accent-dim"
                 >
                   {strategy.name}
                 </Link>
@@ -89,8 +104,9 @@ export const StrategiesPage: FC = () => {
                 <button
                   type="button"
                   onClick={() => void navigate(`/build?strategy=${strategy.id}`)}
-                  className="cursor-pointer rounded-sm border border-border-strong px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-sm border border-border-strong px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-accent-dim hover:text-accent active:translate-y-px"
                 >
+                  <ArrowUpRight size={13} strokeWidth={1.5} aria-hidden="true" />
                   Open
                 </button>
 
@@ -102,16 +118,22 @@ export const StrategiesPage: FC = () => {
                         remove.mutate(strategy.id, { onSettled: () => setConfirming(null) });
                       }}
                       disabled={remove.isPending}
-                      className="flex cursor-pointer items-center gap-1.5 rounded-sm bg-neg px-3 py-1.5 text-xs text-bg transition-colors hover:bg-neg/90 active:bg-neg/75 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neg"
+                      aria-label={`Confirm deleting ${strategy.name}`}
+                      className="flex cursor-pointer items-center gap-1.5 rounded-sm bg-neg px-3 py-1.5 text-xs text-bg transition-colors outline-neg hover:bg-neg/90 active:bg-neg/75 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-neg"
                     >
-                      {remove.isPending && <Spinner className="size-3" />}
+                      {remove.isPending ? (
+                        <Spinner className="size-3" />
+                      ) : (
+                        <Check size={13} strokeWidth={2} aria-hidden="true" />
+                      )}
                       {remove.isPending ? "Deleting" : "Confirm"}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirming(null)}
-                      className="cursor-pointer rounded-sm border border-transparent px-2 py-1.5 text-xs text-text-muted transition-colors hover:border-border-strong hover:text-text active:translate-y-px"
+                      className="flex cursor-pointer items-center gap-1.5 rounded-sm border border-transparent px-2 py-1.5 text-xs text-text-muted transition-colors hover:border-border-strong hover:text-text active:translate-y-px"
                     >
+                      <X size={13} strokeWidth={1.5} aria-hidden="true" />
                       Cancel
                     </button>
                   </>
@@ -120,16 +142,17 @@ export const StrategiesPage: FC = () => {
                     type="button"
                     onClick={() => setConfirming(strategy.id)}
                     aria-label={`Delete ${strategy.name}`}
-                    className="cursor-pointer rounded-sm border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-neg hover:text-neg active:translate-y-px"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-sm border border-border px-3 py-1.5 text-xs text-text-muted transition-colors hover:border-neg hover:text-neg active:translate-y-px"
                   >
+                    <Trash2 size={13} strokeWidth={1.5} aria-hidden="true" />
                     Delete
                   </button>
                 )}
               </div>
-            </li>
+            </motion.li>
           ))}
-        </ul>
-      </div>
-    </div>
+        </AnimatePresence>
+      </ul>
+    </PageShell>
   );
 };
