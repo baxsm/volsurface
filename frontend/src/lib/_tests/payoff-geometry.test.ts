@@ -1,125 +1,80 @@
 import { describe, expect, it } from "vitest";
-import {
-  areaPaths,
-  type Box,
-  buildScale,
-  gridOver,
-  linePath,
-  resample,
-  spotTicks,
-} from "../payoff-geometry";
+import { gridOver, payoffDomain, resample, withCrossings } from "../payoff-geometry";
 import type { PayoffPoint } from "../strategy";
-
-const box: Box = { width: 400, height: 200, padLeft: 40, padRight: 20, padTop: 20, padBottom: 30 };
 
 const line = (from: number, to: number, f: (spot: number) => number): PayoffPoint[] =>
   Array.from({ length: to - from + 1 }, (_, i) => ({ spot: from + i, profit: f(from + i) }));
 
-describe("buildScale", () => {
+describe("payoffDomain", () => {
   it("returns null for a curve with nothing to draw", () => {
-    expect(buildScale([], box)).toBeNull();
-    expect(buildScale([{ spot: 10, profit: 1 }], box)).toBeNull();
+    expect(payoffDomain([])).toBeNull();
+    expect(payoffDomain([{ spot: 10, profit: 1 }])).toBeNull();
   });
 
   it("returns null when every sample sits on one spot", () => {
     expect(
-      buildScale(
-        [
-          { spot: 10, profit: 1 },
-          { spot: 10, profit: 2 },
-        ],
-        box,
-      ),
+      payoffDomain([
+        { spot: 10, profit: 1 },
+        { spot: 10, profit: 2 },
+      ]),
     ).toBeNull();
   });
 
-  it("maps the spot domain across the inner width", () => {
-    const scale = buildScale(
-      line(100, 120, (s) => s - 110),
-      box,
-    );
-    expect(scale).not.toBeNull();
-    expect(scale?.x(100)).toBeCloseTo(40);
-    expect(scale?.x(120)).toBeCloseTo(380);
+  it("covers the full spot range", () => {
+    const domain = payoffDomain(line(100, 120, (s) => s - 110));
+    expect(domain?.minSpot).toBe(100);
+    expect(domain?.maxSpot).toBe(120);
   });
 
   it("keeps zero in frame even when the position only ever loses", () => {
-    const scale = buildScale(
-      line(100, 120, () => -5),
-      box,
-    );
-    expect(scale).not.toBeNull();
-    expect(scale?.domain.maxProfit).toBeGreaterThanOrEqual(0);
-    expect(scale?.zeroY).toBeLessThanOrEqual(box.height - box.padBottom);
+    const domain = payoffDomain(line(100, 120, () => -5));
+    expect(domain?.maxProfit).toBeGreaterThanOrEqual(0);
   });
 
   it("keeps zero in frame when the position only ever profits", () => {
-    const scale = buildScale(
-      line(100, 120, () => 5),
-      box,
-    );
-    expect(scale?.domain.minProfit).toBeLessThanOrEqual(0);
-    expect(scale?.zeroY).toBeGreaterThanOrEqual(box.padTop);
+    const domain = payoffDomain(line(100, 120, () => 5));
+    expect(domain?.minProfit).toBeLessThanOrEqual(0);
   });
 
-  it("puts higher profit higher on screen", () => {
-    const scale = buildScale(
-      line(100, 120, (s) => s - 110),
-      box,
-    );
-    expect(scale?.y(10)).toBeLessThan(scale?.y(-10) ?? 0);
+  it("leaves headroom past the extremes so the curve is not flush to the frame", () => {
+    const domain = payoffDomain(line(100, 120, (s) => s - 110));
+    expect(domain?.maxProfit).toBeGreaterThan(10);
+    expect(domain?.minProfit).toBeLessThan(-10);
   });
 });
 
-describe("linePath", () => {
-  it("draws one vertex per sample with no smoothing", () => {
-    const points = line(100, 104, (s) => s - 102);
-    const scale = buildScale(points, box);
-    if (scale === null) throw new Error("scale");
-    const path = linePath(points, scale);
-    expect(path.startsWith("M")).toBe(true);
-    expect(path.match(/L/g)).toHaveLength(4);
-    expect(path).not.toContain("C");
-  });
-});
-
-describe("areaPaths", () => {
-  it("splits profit and loss into separate closed fills", () => {
-    const points = line(100, 120, (s) => s - 110);
-    const scale = buildScale(points, box);
-    if (scale === null) throw new Error("scale");
-    const { positive, negative } = areaPaths(points, scale);
-    expect(positive).not.toBe("");
-    expect(negative).not.toBe("");
-    expect(positive.endsWith("Z")).toBe(true);
-    expect(negative.endsWith("Z")).toBe(true);
-  });
-
-  it("leaves the profit fill empty when the position never profits", () => {
-    const points = line(100, 120, () => -3);
-    const scale = buildScale(points, box);
-    if (scale === null) throw new Error("scale");
-    expect(areaPaths(points, scale).positive).toBe("");
-  });
-
-  // the fills meeting anywhere but the breakeven is the tell that the split
-  // happened per-sample instead of on the real crossing
-  it("meets the two fills on the zero crossing", () => {
-    const points = line(100, 120, (s) => s - 110);
-    const scale = buildScale(points, box);
-    if (scale === null) throw new Error("scale");
-    const { negative } = areaPaths(points, scale);
-    const crossing = scale.x(110).toFixed(2);
-    expect(negative).toContain(crossing);
+describe("withCrossings", () => {
+  it("inserts a vertex exactly on the breakeven", () => {
+    const out = withCrossings([
+      { spot: 100, profit: -10 },
+      { spot: 120, profit: 10 },
+    ]);
+    expect(out).toHaveLength(3);
+    expect(out[1]?.profit).toBe(0);
+    expect(out[1]?.spot).toBeCloseTo(110);
   });
 
   it("handles a curve that crosses zero more than once", () => {
-    const points = line(100, 140, (s) => -Math.abs(s - 120) + 10);
-    const scale = buildScale(points, box);
-    if (scale === null) throw new Error("scale");
-    const { positive, negative } = areaPaths(points, scale);
-    expect(positive.match(/Z/g)).toHaveLength(1);
-    expect(negative.match(/Z/g)).toHaveLength(2);
+    const out = withCrossings(line(100, 140, (s) => -Math.abs(s - 120) + 10));
+    expect(out.filter((p) => p.profit === 0)).toHaveLength(2);
+  });
+
+  it("adds nothing when the curve never crosses", () => {
+    const points = line(100, 110, () => -3);
+    expect(withCrossings(points)).toHaveLength(points.length);
+  });
+
+  it("does not duplicate a sample that already sits on zero", () => {
+    const out = withCrossings([
+      { spot: 100, profit: -5 },
+      { spot: 110, profit: 0 },
+      { spot: 120, profit: 5 },
+    ]);
+    expect(out).toHaveLength(3);
+  });
+
+  it("leaves a curve too short to cross alone", () => {
+    expect(withCrossings([{ spot: 1, profit: 1 }])).toHaveLength(1);
   });
 });
 
@@ -166,15 +121,9 @@ describe("resample", () => {
   });
 });
 
-describe("spotTicks", () => {
-  it("picks round numbers inside the window", () => {
-    const ticks = spotTicks(97, 253);
-    expect(ticks.length).toBeGreaterThan(2);
-    expect(ticks.every((t) => t >= 97 && t <= 253)).toBe(true);
-    expect(ticks.every((t) => t % 10 === 0)).toBe(true);
-  });
-
-  it("returns nothing for an empty window", () => {
-    expect(spotTicks(100, 100)).toEqual([]);
+describe("gridOver", () => {
+  it("spans the window inclusive of both ends", () => {
+    const grid = gridOver(100, 120, 4);
+    expect(grid).toEqual([100, 105, 110, 115, 120]);
   });
 });

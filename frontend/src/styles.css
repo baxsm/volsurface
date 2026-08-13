@@ -51,6 +51,24 @@
     color-scheme: dark;
   }
 
+  /* the shell is a fixed-height frame and every page scrolls inside its own
+     panel, so the document itself must never scroll. */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* visx measures label widths through a probe svg it appends to the body at
+     top:-100%. that negative offset extends the scroll area, which showed up
+     as a second scrollbar beside the panel's own. the probe is 0x0 and text
+     measurement does not depend on where it sits, so pinning it to the origin
+     costs nothing. */
+  #__react_svg_text_measurement_id {
+    top: 0 !important;
+    left: 0 !important;
+  }
+
   /* the select chevron, the one mark that cannot come from lucide: a
      background-image needs a url, not a react component, and a data uri cannot
      read a css variable. the stroke is therefore a copy of --color-text-faint

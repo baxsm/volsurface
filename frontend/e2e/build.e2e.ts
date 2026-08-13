@@ -67,9 +67,12 @@ test("editing a leg redraws the payoff", async ({ page }) => {
   const before = await curve.getAttribute("d");
 
   await page.getByLabel("Leg 1 strike").fill("205");
-  await settle(page);
 
-  expect(await curve.getAttribute("d")).not.toBe(before);
+  // the curve is sprung and the edit is debounced, so polling for the change is
+  // what makes this independent of how long the settle happens to take
+  await expect
+    .poll(async () => await curve.getAttribute("d"), { timeout: 10_000 })
+    .not.toBe(before);
 });
 
 test("a half-typed leg keeps the last curve instead of erroring", async ({ page }) => {

@@ -1,62 +1,37 @@
+import { AxisBottom, AxisLeft } from "@visx/axis";
+import { Group } from "@visx/group";
+import { ParentSize } from "@visx/responsive";
+import { scaleLinear } from "@visx/scale";
+import { AreaClosed, Line, LinePath } from "@visx/shape";
 import { useReducedMotion } from "motion/react";
-import { type FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  areaPaths,
-  type Box,
-  buildScale,
-  gridOver,
-  linePath,
-  resample,
-  spotTicks,
-} from "@/lib/payoff-geometry";
+import { type FC, useEffect, useMemo, useRef, useState } from "react";
+import { gridOver, payoffDomain, resample, withCrossings } from "@/lib/payoff-geometry";
 import type { PayoffPoint, PayoffResult } from "@/lib/strategy";
 
 /** the y labels need room, but 52px of it on a 375px screen is most of the plot,
     so the gutter shrinks with the box instead of squeezing the curve */
 const paddingFor = (width: number) =>
   width < 480
-    ? { padLeft: 38, padRight: 12, padTop: 22, padBottom: 30 }
-    : { padLeft: 52, padRight: 20, padTop: 24, padBottom: 34 };
-/** until the container reports a width, so the first paint is not a 0-wide box.
-    kept narrow: the svg is width-governed by its container, and a wide default
-    would still set the aspect ratio for the frame before the observer fires */
-const FALLBACK = { width: 360, height: 320 };
+    ? { left: 38, right: 12, top: 22, bottom: 30 }
+    : { left: 52, right: 20, top: 24, bottom: 34 };
 /** the tween grid. dense enough that the kinks stay sharp, small enough to
     rebuild every frame without dropping one */
 const GRID_STEPS = 160;
+/** what the chart draws at before the container is measured, so the first paint
+    is not a 0-wide box. kept narrow so an over-wide frame never flashes. */
+const INITIAL_SIZE = { width: 360, height: 320 };
+
+const axisLabel = {
+  className: "num",
+  fill: "var(--color-text-faint)",
+  fontSize: 10,
+} as const;
 
 /**
- * the viewBox has to match the element's real pixel size. a fixed viewBox scaled
- * into a wider box letterboxes the drawing, which reads as a clipped chart with
- * dead margins, and it stretches the type along with the geometry.
- */
-const useMeasuredBox = (): [(node: HTMLDivElement | null) => void, Box] => {
-  const [size, setSize] = useState(FALLBACK);
-  const observerRef = useRef<ResizeObserver | null>(null);
-
-  const ref = useCallback((node: HTMLDivElement | null) => {
-    observerRef.current?.disconnect();
-    if (node === null) return;
-
-    const observer = new ResizeObserver((entries) => {
-      const rect = entries[0]?.contentRect;
-      if (rect === undefined) return;
-      if (rect.width < 1 || rect.height < 1) return;
-      setSize({ width: Math.round(rect.width), height: Math.round(rect.height) });
-    });
-    observer.observe(node);
-    observerRef.current = observer;
-  }, []);
-
-  useEffect(() => () => observerRef.current?.disconnect(), []);
-
-  return [ref, { ...size, ...paddingFor(size.width) }];
-};
-
-/**
- * critically damped spring on each vertex. a css transition cannot cross-fade
- * two paths with different vertex counts, and animating the `d` string directly
- * snaps, so the curve is tweened as data and re-serialised each frame.
+ * critically damped spring on each vertex. this animates the data, not the
+ * drawing: visx re-serialises the path from whatever points it is handed, and
+ * two payoffs with different vertex counts have nothing to cross-fade between,
+ * so the curve is tweened as numbers and redrawn each frame.
  */
 const useSprungCurve = (target: PayoffPoint[], enabled: boolean): PayoffPoint[] => {
   const [curve, setCurve] = useState<PayoffPoint[]>(target);
@@ -149,6 +124,194 @@ const useSprungCurve = (target: PayoffPoint[], enabled: boolean): PayoffPoint[] 
   return curve;
 };
 
+interface PlotProps {
+  curve: PayoffPoint[];
+  breakevens: number[];
+  spot: number | null;
+  width: number;
+  height: number;
+}
+
+const Plot: FC<PlotProps> = ({ curve, breakevens, spot, width, height }) => {
+  const pad = paddingFor(width);
+  const domain = useMemo(() => payoffDomain(curve), [curve]);
+
+  const innerWidth = Math.max(width - pad.left - pad.right, 1);
+  const innerHeight = Math.max(height - pad.top - pad.bottom, 1);
+
+  const xScale = useMemo(
+    () =>
+      scaleLinear<number>({
+        domain: [domain?.minSpot ?? 0, domain?.maxSpot ?? 1],
+        range: [0, innerWidth],
+      }),
+    [domain, innerWidth],
+  );
+
+  const yScale = useMemo(
+    () =>
+      scaleLinear<number>({
+        domain: [domain?.minProfit ?? 0, domain?.maxProfit ?? 1],
+        range: [innerHeight, 0],
+      }),
+    [domain, innerHeight],
+  );
+
+  // the fills are split by a predicate over whole samples, so the crossings have
+  // to exist as vertices or the two areas meet at the nearest grid point instead
+  // of on the breakeven
+  const split = useMemo(() => withCrossings(curve), [curve]);
+
+  if (domain === null) {
+    return (
+      <div className="flex h-full items-center justify-center px-6 text-center">
+        <p className="text-sm text-text-muted">
+          This position has no range to draw. Check the strikes and prices.
+        </p>
+      </div>
+    );
+  }
+
+  const zeroY = yScale(0);
+  const inWindow = (value: number) => value >= domain.minSpot && value <= domain.maxSpot;
+  // fewer ticks on a narrow chart, where five sets of labels would collide
+  const tickCount = width < 480 ? 3 : 5;
+
+  const x = (d: PayoffPoint) => xScale(d.spot);
+  const y = (d: PayoffPoint) => yScale(d.profit);
+
+  // the spot marker and a breakeven can land on nearly the same x. the spot
+  // label then sits at the top and the breakevens below the axis, so neither
+  // overlaps the curve or the other.
+  return (
+    <svg
+      width={width}
+      height={height}
+      role="img"
+      aria-label="Profit and loss at expiry across the underlying price"
+    >
+      <title>Profit and loss at expiry across the underlying price</title>
+
+      <Group left={pad.left} top={pad.top}>
+        {xScale.ticks(tickCount).map((tick) => (
+          <Line
+            key={`grid-${tick}`}
+            from={{ x: xScale(tick), y: 0 }}
+            to={{ x: xScale(tick), y: innerHeight }}
+            stroke="var(--color-border)"
+            strokeWidth={1}
+          />
+        ))}
+
+        <AreaClosed<PayoffPoint>
+          data={split}
+          x={x}
+          y={y}
+          y0={() => zeroY}
+          yScale={yScale}
+          defined={(d) => d.profit <= 0}
+          fill="var(--color-neg)"
+          fillOpacity={0.14}
+        />
+        <AreaClosed<PayoffPoint>
+          data={split}
+          x={x}
+          y={y}
+          y0={() => zeroY}
+          yScale={yScale}
+          defined={(d) => d.profit >= 0}
+          fill="var(--color-pos)"
+          fillOpacity={0.16}
+        />
+
+        <Line
+          from={{ x: 0, y: zeroY }}
+          to={{ x: innerWidth, y: zeroY }}
+          stroke="var(--color-border-strong)"
+          strokeWidth={1}
+        />
+
+        {spot !== null && inWindow(spot) && (
+          <>
+            <Line
+              from={{ x: xScale(spot), y: 0 }}
+              to={{ x: xScale(spot), y: innerHeight }}
+              stroke="var(--color-text-faint)"
+              strokeWidth={1}
+              strokeDasharray="3 3"
+            />
+            <text x={xScale(spot)} y={-9} textAnchor="middle" {...axisLabel}>
+              spot {spot.toFixed(2)}
+            </text>
+          </>
+        )}
+
+        <LinePath<PayoffPoint>
+          data={curve}
+          x={x}
+          y={y}
+          stroke="var(--color-accent)"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+
+        {breakevens.filter(inWindow).map((value) => {
+          const cx = xScale(value);
+          const labelY = Math.min(zeroY + 16, innerHeight - 3);
+          const label = value.toFixed(2);
+          // the spot marker's dashed line can pass straight through this label,
+          // so it sits on its own chip rather than being read over a line
+          const chipWidth = label.length * 5.6 + 8;
+          return (
+            <Group key={`be-${value}`}>
+              <circle
+                cx={cx}
+                cy={zeroY}
+                r={3.5}
+                fill="var(--color-bg)"
+                stroke="var(--color-accent)"
+                strokeWidth={1.5}
+              />
+              <rect
+                x={cx - chipWidth / 2}
+                y={labelY - 8}
+                width={chipWidth}
+                height={12}
+                rx={2}
+                fill="var(--color-bg)"
+              />
+              <text x={cx} y={labelY} textAnchor="middle" {...axisLabel} fill="var(--color-accent)">
+                {label}
+              </text>
+            </Group>
+          );
+        })}
+
+        <AxisBottom
+          scale={xScale}
+          top={innerHeight}
+          numTicks={tickCount}
+          stroke="var(--color-border)"
+          hideTicks
+          hideAxisLine
+          tickFormat={(value) => `${Number(value)}`}
+          tickLabelProps={() => ({ ...axisLabel, textAnchor: "middle", dy: "0.25em" })}
+        />
+
+        <AxisLeft
+          scale={yScale}
+          tickValues={[domain.maxProfit, 0, domain.minProfit]}
+          hideTicks
+          hideAxisLine
+          tickFormat={(value) => Number(value).toFixed(2)}
+          tickLabelProps={() => ({ ...axisLabel, textAnchor: "end", dx: "-0.5em", dy: "0.25em" })}
+        />
+      </Group>
+    </svg>
+  );
+};
+
 interface PayoffChartProps {
   payoff: PayoffResult;
   spot: number | null;
@@ -159,7 +322,6 @@ interface PayoffChartProps {
 
 export const PayoffChart: FC<PayoffChartProps> = ({ payoff, spot, stale = false }) => {
   const reduced = useReducedMotion() === true;
-  const [containerRef, box] = useMeasuredBox();
 
   const grid = useMemo(
     () => gridOver(payoff.range.min, payoff.range.max, GRID_STEPS),
@@ -168,165 +330,23 @@ export const PayoffChart: FC<PayoffChartProps> = ({ payoff, spot, stale = false 
   const target = useMemo(() => resample(payoff.points, grid), [payoff.points, grid]);
   const curve = useSprungCurve(target, !reduced);
 
-  const scale = useMemo(() => buildScale(curve, box), [curve, box]);
-
-  if (scale === null) {
-    return (
-      <div ref={containerRef} className="flex h-full items-center justify-center px-6 text-center">
-        <p className="text-sm text-text-muted">
-          This position has no range to draw. Check the strikes and prices.
-        </p>
-      </div>
-    );
-  }
-
-  const { positive, negative } = areaPaths(curve, scale);
-  const path = linePath(curve, scale);
-  // fewer ticks on a narrow chart, where five sets of labels would collide
-  const ticks = spotTicks(scale.domain.minSpot, scale.domain.maxSpot, box.width < 480 ? 3 : 5);
-  const inWindow = (value: number) =>
-    value >= scale.domain.minSpot && value <= scale.domain.maxSpot;
-
-  const plotBottom = box.height - box.padBottom;
-  const plotRight = box.width - box.padRight;
-
-  // the spot marker and a breakeven can land on nearly the same x. the spot
-  // label then sits at the top and the breakevens below the axis, so neither
-  // overlaps the curve or the other.
   return (
-    <div ref={containerRef} className="h-full w-full">
-      <svg
-        viewBox={`0 0 ${box.width} ${box.height}`}
-        className={`block h-full w-full transition-opacity duration-200 ${stale ? "opacity-50" : "opacity-100"}`}
-        role="img"
-        aria-label="Profit and loss at expiry across the underlying price"
-      >
-        <title>Profit and loss at expiry across the underlying price</title>
-
-        {ticks.map((tick) => (
-          <line
-            key={`grid-${tick}`}
-            x1={scale.x(tick)}
-            x2={scale.x(tick)}
-            y1={box.padTop}
-            y2={plotBottom}
-            stroke="var(--color-border)"
-            strokeWidth="1"
-          />
-        ))}
-
-        <path d={negative} fill="var(--color-neg)" fillOpacity="0.14" />
-        <path d={positive} fill="var(--color-pos)" fillOpacity="0.16" />
-
-        <line
-          x1={box.padLeft}
-          x2={plotRight}
-          y1={scale.zeroY}
-          y2={scale.zeroY}
-          stroke="var(--color-border-strong)"
-          strokeWidth="1"
-        />
-
-        {spot !== null && inWindow(spot) && (
-          <g>
-            <line
-              x1={scale.x(spot)}
-              x2={scale.x(spot)}
-              y1={box.padTop}
-              y2={plotBottom}
-              stroke="var(--color-text-faint)"
-              strokeWidth="1"
-              strokeDasharray="3 3"
+    <div
+      className={`h-full w-full transition-opacity duration-200 ${stale ? "opacity-50" : "opacity-100"}`}
+    >
+      <ParentSize initialSize={INITIAL_SIZE}>
+        {({ width, height }) =>
+          width < 1 || height < 1 ? null : (
+            <Plot
+              curve={curve}
+              breakevens={payoff.breakevens}
+              spot={spot}
+              width={width}
+              height={height}
             />
-            <text
-              x={scale.x(spot)}
-              y={box.padTop - 9}
-              textAnchor="middle"
-              className="num"
-              fill="var(--color-text-faint)"
-              fontSize="10"
-            >
-              spot {spot.toFixed(2)}
-            </text>
-          </g>
-        )}
-
-        <path
-          d={path}
-          fill="none"
-          stroke="var(--color-accent)"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-
-        {payoff.breakevens.filter(inWindow).map((value) => {
-          const cx = scale.x(value);
-          const labelY = Math.min(scale.zeroY + 16, plotBottom - 3);
-          const label = value.toFixed(2);
-          // the spot marker's dashed line can pass straight through this label,
-          // so it sits on its own chip rather than being read over a line
-          const chipWidth = label.length * 5.6 + 8;
-          return (
-            <g key={`be-${value}`}>
-              <circle
-                cx={cx}
-                cy={scale.zeroY}
-                r="3.5"
-                fill="var(--color-bg)"
-                stroke="var(--color-accent)"
-                strokeWidth="1.5"
-              />
-              <rect
-                x={cx - chipWidth / 2}
-                y={labelY - 8}
-                width={chipWidth}
-                height="12"
-                rx="2"
-                fill="var(--color-bg)"
-              />
-              <text
-                x={cx}
-                y={labelY}
-                textAnchor="middle"
-                className="num"
-                fill="var(--color-accent)"
-                fontSize="10"
-              >
-                {label}
-              </text>
-            </g>
-          );
-        })}
-
-        {ticks.map((tick) => (
-          <text
-            key={`tick-${tick}`}
-            x={scale.x(tick)}
-            y={plotBottom + 16}
-            textAnchor="middle"
-            className="num"
-            fill="var(--color-text-faint)"
-            fontSize="10"
-          >
-            {tick}
-          </text>
-        ))}
-
-        {[scale.domain.maxProfit, 0, scale.domain.minProfit].map((value) => (
-          <text
-            key={`y-${value}`}
-            x={box.padLeft - 10}
-            y={scale.y(value) + 3}
-            textAnchor="end"
-            className="num"
-            fill="var(--color-text-faint)"
-            fontSize="10"
-          >
-            {value.toFixed(2)}
-          </text>
-        ))}
-      </svg>
+          )
+        }
+      </ParentSize>
     </div>
   );
 };

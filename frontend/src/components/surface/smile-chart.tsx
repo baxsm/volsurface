@@ -1,4 +1,9 @@
-import { type FC, useEffect, useRef, useState } from "react";
+import { LinearGradient } from "@visx/gradient";
+import { Group } from "@visx/group";
+import { ParentSize } from "@visx/responsive";
+import { scaleLinear, scalePower } from "@visx/scale";
+import { AreaClosed, Line, LinePath } from "@visx/shape";
+import type { FC } from "react";
 import { decimal, percent } from "@/lib/format";
 import { rampHex } from "@/lib/surface-geometry";
 
@@ -24,181 +29,144 @@ interface SmileChartProps {
 
 const PAD = { left: 44, right: 12, top: 14, bottom: 26 };
 const HEIGHT = 168;
+/** until the container is measured, so the curve does not flash a 0-wide box */
+const INITIAL_SIZE = { width: 360, height: HEIGHT };
 
-/**
- * the 2D cross-section under the slice plane. hand-written SVG for the same
- * reason the payoff chart is: it draws one path from data the engine already
- * shaped, and a chart library would add packages to do less.
- */
-export const SmileChart: FC<SmileChartProps> = ({
-  points,
-  xLabel,
-  marker,
-  markerLabel,
-  sqrtScale = false,
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
+const axisLabel = {
+  className: "num",
+  fill: "var(--color-text-faint)",
+  fontSize: 10,
+} as const;
 
-  // the viewBox matches real pixels, so the curve never letterboxes inside a
-  // wider container the way a fixed viewBox does
-  useEffect(() => {
-    const element = ref.current;
-    if (element === null) return;
+interface PlotProps extends SmileChartProps {
+  width: number;
+}
 
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (entry !== undefined) setWidth(entry.contentRect.width);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  const usable = width > 0 && points.length > 1;
-
+const Plot: FC<PlotProps> = ({ points, xLabel, marker, markerLabel, sqrtScale, width }) => {
   const xs = points.map((p) => p.x);
   const ivs = points.map((p) => p.iv);
-  const minX = usable ? Math.min(...xs) : 0;
-  const maxX = usable ? Math.max(...xs) : 1;
-  const rawMinIv = usable ? Math.min(...ivs) : 0;
-  const rawMaxIv = usable ? Math.max(...ivs) : 1;
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const rawMinIv = Math.min(...ivs);
+  const rawMaxIv = Math.max(...ivs);
   const pad = Math.max((rawMaxIv - rawMinIv) * 0.15, 0.005);
-  const minIv = rawMinIv - pad;
-  const maxIv = rawMaxIv + pad;
 
-  const scaleX = (value: number) => (sqrtScale ? Math.sqrt(Math.max(value, 0)) : value);
-  const scaledMin = scaleX(minX);
-  const scaledMax = scaleX(maxX);
-
-  const xSpan = scaledMax - scaledMin || 1;
-  const ivSpan = maxIv - minIv || 1;
   const innerWidth = Math.max(width - PAD.left - PAD.right, 1);
   const innerHeight = HEIGHT - PAD.top - PAD.bottom;
 
-  const toX = (value: number) => PAD.left + ((scaleX(value) - scaledMin) / xSpan) * innerWidth;
-  const toY = (value: number) => PAD.top + ((maxIv - value) / ivSpan) * innerHeight;
+  // a sqrt scale is a power scale at exponent 0.5, so the term cut spaces its
+  // expiries the same way the mesh does rather than by raw years
+  const xScale = sqrtScale
+    ? scalePower<number>({ domain: [minX, maxX], range: [0, innerWidth], exponent: 0.5 })
+    : scaleLinear<number>({ domain: [minX, maxX], range: [0, innerWidth] });
 
-  const path = usable
-    ? points
-        .map((p, i) => `${i === 0 ? "M" : "L"}${toX(p.x).toFixed(2)} ${toY(p.iv).toFixed(2)}`)
-        .join(" ")
-    : "";
+  const yScale = scaleLinear<number>({
+    domain: [rawMinIv - pad, rawMaxIv + pad],
+    range: [innerHeight, 0],
+  });
 
-  const area = usable
-    ? `${path} L${toX(maxX).toFixed(2)} ${(HEIGHT - PAD.bottom).toFixed(2)} L${toX(minX).toFixed(2)} ${(HEIGHT - PAD.bottom).toFixed(2)} Z`
-    : "";
-
-  const ticks = usable ? [rawMinIv, (rawMinIv + rawMaxIv) / 2, rawMaxIv] : [];
+  // a term cut can span less than a point of vol, where all three ticks round to
+  // the same label and the axis reads as a repeated number. deduping on the
+  // formatted text drops the collision rather than the precision.
+  const ticks: number[] = [];
+  const seen = new Set<string>();
+  for (const value of [rawMinIv, (rawMinIv + rawMaxIv) / 2, rawMaxIv]) {
+    const label = percent(value, 0);
+    if (seen.has(label)) continue;
+    seen.add(label);
+    ticks.push(value);
+  }
 
   return (
-    /* the height is reserved whether or not the curve draws. without it the
-       container collapses to nothing on the first paint, before the observer
-       has reported a width, and the panel below jumps up. */
-    <div ref={ref} className="w-full" style={{ minHeight: HEIGHT }}>
-      {usable && (
-        <svg
-          width={width}
-          height={HEIGHT}
-          viewBox={`0 0 ${width} ${HEIGHT}`}
-          role="img"
-          aria-label={`Implied volatility against ${xLabel}`}
-        >
-          <title>{`Implied volatility against ${xLabel}`}</title>
+    <svg
+      width={width}
+      height={HEIGHT}
+      role="img"
+      aria-label={`Implied volatility against ${xLabel}`}
+    >
+      <title>{`Implied volatility against ${xLabel}`}</title>
 
-          {ticks.map((tick) => (
-            <g key={tick}>
-              <line
-                x1={PAD.left}
-                x2={width - PAD.right}
-                y1={toY(tick)}
-                y2={toY(tick)}
-                stroke="var(--color-border)"
-                strokeDasharray="2 4"
-              />
-              <text
-                x={PAD.left - 8}
-                y={toY(tick) + 3}
-                textAnchor="end"
-                className="num"
-                fontSize="10"
-                fill="var(--color-text-faint)"
-              >
-                {percent(tick, 0)}
+      {/* ids are document-global, so these are namespaced rather than named
+          for what they draw - the auth page defines its own smile gradient */}
+      <LinearGradient
+        id="smile-chart-fill"
+        from={rampHex(0.62)}
+        to={rampHex(0.62)}
+        fromOpacity={0.18}
+        toOpacity={0}
+      />
+      {/* the stroke walks the same perceptual ramp the 3d mesh paints, so a cut
+          through the surface is coloured like the surface it cuts */}
+      <LinearGradient id="smile-chart-stroke" vertical from={rampHex(0.95)} to={rampHex(0.15)} />
+
+      <Group left={PAD.left} top={PAD.top}>
+        {ticks.map((tick) => (
+          <Group key={tick}>
+            <Line
+              from={{ x: 0, y: yScale(tick) }}
+              to={{ x: innerWidth, y: yScale(tick) }}
+              stroke="var(--color-border)"
+              strokeDasharray="2 4"
+            />
+            <text x={-8} y={yScale(tick) + 3} textAnchor="end" {...axisLabel}>
+              {percent(tick, 0)}
+            </text>
+          </Group>
+        ))}
+
+        <AreaClosed<SmilePoint>
+          data={points}
+          x={(d) => xScale(d.x)}
+          y={(d) => yScale(d.iv)}
+          yScale={yScale}
+          fill="url(#smile-chart-fill)"
+        />
+        <LinePath<SmilePoint>
+          data={points}
+          x={(d) => xScale(d.x)}
+          y={(d) => yScale(d.iv)}
+          stroke="url(#smile-chart-stroke)"
+          strokeWidth={1.75}
+          strokeLinejoin="round"
+        />
+
+        {marker != null && marker >= minX && marker <= maxX && (
+          <Group>
+            <Line
+              from={{ x: xScale(marker), y: 0 }}
+              to={{ x: xScale(marker), y: innerHeight }}
+              stroke="var(--color-text-faint)"
+              strokeDasharray="3 3"
+            />
+            {markerLabel !== undefined && (
+              <text x={xScale(marker)} y={innerHeight + 18} textAnchor="middle" {...axisLabel}>
+                {markerLabel}
               </text>
-            </g>
-          ))}
+            )}
+          </Group>
+        )}
 
-          {/* ids are document-global, so these are namespaced rather than named
-              for what they draw - the auth page defines its own smile gradient */}
-          <defs>
-            <linearGradient id="smile-chart-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={rampHex(0.62)} stopOpacity="0.18" />
-              <stop offset="100%" stopColor={rampHex(0.62)} stopOpacity="0" />
-            </linearGradient>
-            {/* the stroke walks the same perceptual ramp the 3d mesh paints, so
-                a cut through the surface is coloured like the surface it cuts */}
-            <linearGradient id="smile-chart-stroke" x1="0" y1="1" x2="0" y2="0">
-              <stop offset="0%" stopColor={rampHex(0.15)} />
-              <stop offset="50%" stopColor={rampHex(0.55)} />
-              <stop offset="100%" stopColor={rampHex(0.95)} />
-            </linearGradient>
-          </defs>
-
-          <path d={area} fill="url(#smile-chart-fill)" />
-          <path
-            d={path}
-            fill="none"
-            stroke="url(#smile-chart-stroke)"
-            strokeWidth="1.75"
-            strokeLinejoin="round"
-          />
-
-          {marker != null && marker >= minX && marker <= maxX && (
-            <g>
-              <line
-                x1={toX(marker)}
-                x2={toX(marker)}
-                y1={PAD.top}
-                y2={HEIGHT - PAD.bottom}
-                stroke="var(--color-text-faint)"
-                strokeDasharray="3 3"
-              />
-              {markerLabel !== undefined && (
-                <text
-                  x={toX(marker)}
-                  y={HEIGHT - 8}
-                  textAnchor="middle"
-                  className="num"
-                  fontSize="10"
-                  fill="var(--color-text-faint)"
-                >
-                  {markerLabel}
-                </text>
-              )}
-            </g>
-          )}
-
-          <text
-            x={PAD.left}
-            y={HEIGHT - 8}
-            className="num"
-            fontSize="10"
-            fill="var(--color-text-faint)"
-          >
-            {decimal(minX, minX >= 10 ? 0 : 2)}
-          </text>
-          <text
-            x={width - PAD.right}
-            y={HEIGHT - 8}
-            textAnchor="end"
-            className="num"
-            fontSize="10"
-            fill="var(--color-text-faint)"
-          >
-            {decimal(maxX, maxX >= 10 ? 0 : 2)}
-          </text>
-        </svg>
-      )}
-    </div>
+        <text x={0} y={innerHeight + 18} {...axisLabel}>
+          {decimal(minX, minX >= 10 ? 0 : 2)}
+        </text>
+        <text x={innerWidth} y={innerHeight + 18} textAnchor="end" {...axisLabel}>
+          {decimal(maxX, maxX >= 10 ? 0 : 2)}
+        </text>
+      </Group>
+    </svg>
   );
 };
+
+export const SmileChart: FC<SmileChartProps> = (props) => (
+  /* an explicit height, not a min-height: ParentSize sizes its own wrappers at
+     height:100%, which resolves to 0 against a min-height and clips the chart
+     to nothing. the fixed height also reserves the row whether or not the curve
+     draws, so the panel below does not jump on the first paint. */
+  <div className="w-full" style={{ height: HEIGHT }}>
+    {props.points.length > 1 && (
+      <ParentSize initialSize={INITIAL_SIZE}>
+        {({ width }) => (width < 1 ? null : <Plot {...props} width={width} />)}
+      </ParentSize>
+    )}
+  </div>
+);
